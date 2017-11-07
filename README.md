@@ -83,7 +83,7 @@ We will find:
     * nw_trees:  a directory containing for each scenario the newick formated tree
     * sequences:  a directory containing for each scenario, all simulated sequences (the option --no_clean_seqs must be used)
     * likelihood_summaries:  a directory containing for each scenario, likelihood summaries (the option --get_likelihood_summaries must be used)
-    * plot_tree_ali:  a directory containing for each scenario, a plot with the tree, the alignment and the posterior probabilities per site for each used methods (the option --get_likelihood_summaries must be used)
+    * plot_tree_ali:  a directory containing for each scenario, a plot with the tree, the alignment and the posterior probabilities per site for each used methods (the option --plot_ali must be used)
 
 ## Detection:
 
