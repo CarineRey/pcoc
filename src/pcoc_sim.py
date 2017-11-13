@@ -614,10 +614,12 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                         if (e1 != e2) and args.pcoc:
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
-                            bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            if DEV:
+                                bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
                             bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
                             # Negatif
-                            bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            if DEV:
+                                bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
                             bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
                 
                 

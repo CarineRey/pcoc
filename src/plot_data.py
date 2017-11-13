@@ -254,8 +254,8 @@ class SequenceScoreFace(StaticItemFace):
     
     def draw_legend(self):
         legend_h = self.height * ((self.nb_models - 1) / float(self.nb_models))
-        if legend_h < 40:
-            legend_h = 40
+        if legend_h < 35:
+            legend_h = 35
         legend_rect = QGraphicsRectItem(-20, 0, 10, legend_h, parent=self.item)
         x0 = -20
         n_cat = 6.

@@ -189,19 +189,37 @@ docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_
 <pre class="{sh}"><code>mkdir -p example
 cd example
 
+## Get the data
+mkdir -p data
+### tree
+wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/phylogeny.nwk -P data/
+tree=$PWD/data/phylogeny.nwk
+### alignment
+wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/alignments/SLC26A5.fasta -P data/
+ali=$PWD/data/SLC26A5.fasta
+
+
 ## First identify node with convergent phenotype with pcoc_num_tree.py
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $PWD/tree/tree.nw -o $PWD/tree/num_tree.pdf
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/num_tree.pdf
 
 ## In the num_tree.pdf, get the numbers of the branch with the convergent transitions
 ## You can check your combination using the -m parameter
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $PWD/tree/tree.nw -o $PWD/tree/colored_num_tree.pdf -m 5,6/89,63/52
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/colored_num_tree.pdf -m 0/3
 
 ## Then run pcoc_det on your alignment
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t  tree.nw -aa ali.fa -o $PWD/output_pcoc_det -m 5,6/89,63/52
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3
 
 ## if you want to have a nice plot you can use the option --plot with or without the option --reorder
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t  tree.nw -aa ali.fa -o $PWD/output_pcoc_det -m 5,6/89,63/52 --plot --reorder
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t  tree.nw -aa ali.fa -o $PWD/output_pcoc_det -m 5,6/89,63/52 --plot</code></pre>
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot
+## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder
+
+
+## another example with several convergent branch
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 2,0,1/11,9,10/6 --plot
+
+</code></pre>
 <p>Results will can be found in $PWD/output_pcoc_det/RUN_yyyymmdd_hhmmss/</p>
 <p>We will find:</p>
 <ul>

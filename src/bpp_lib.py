@@ -26,7 +26,7 @@ import logging
 logger = logging.getLogger("pcoc.bpp_lib")
 
 
-debug_mode_bpp = False
+debug_mode_bpp = True
 
 ########################################################################
 ##                    Functions                                       ##
@@ -34,8 +34,9 @@ debug_mode_bpp = False
 
 def write_config(d, estim=True, NbCat=""):
     bpp_config_files_estim = [
-                   ("CATseq.bpp", CATseq_bpp),
-                   ("CATseq_OneChange.bpp", CATseq_OneChange_bpp),
+                   #("CATseq.bpp", CATseq_bpp),
+                   ("CATseq_estim.bpp", CATseq_estim),
+                   #("CATseq_OneChange.bpp", CATseq_OneChange_bpp),
                    ("CATseq_conv.bpp", CATseq_conv_bpp)]
     bpp_config_files_sim = [("CATseq_sim_noconv.bpp", CATseq_sim_noconv_bpp),
                    ("CATseq_sim_conv.bpp", CATseq_sim_conv_bpp)]
@@ -71,8 +72,37 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
         number_of_models = 3
     else:
         number_of_models = 1
-    sup_command = ""
 
+
+    command="bppseqgen NAME=%s REP_SEQ=%s REP_TREE=%s NBCAT=%s number_of_sites=%s output.internal.sequences=%s " %(name,repseq.replace("//","/"), reptree, nbCAT,number_of_sites,outputInternalSequences)
+    
+    if c1!=c2:
+        if nodesWithAncestralModel:
+            number_of_models +=1
+            command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+        if nodesWithTransitions:
+            number_of_models +=1
+            command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, c2)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+        if nodesWithConvergentModel:
+            n3="\""+ ",".join(map(str,nodesWithConvergentModel))+"\""
+            number_of_models +=1
+            command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
+
+        command+="param=%s.bpp Ne1=%d Ne2=%d" %(repbppconfig+"/CATseq_sim_conv",c1,c2)
+
+    else:
+        allNodes = nodesWithConvergentModel+nodesWithTransitions+nodesWithAncestralModel
+        number_of_models +=1
+        command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
+        command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, allNodes)))
+        command+="param=%s.bpp Ne1=%d" %(repbppconfig+"/CATseq_sim_noconv", c1)
+
+
+    # If noisy profiles
+    sup_command = ""
     if cz_nodes:
         for (cz, nodes) in cz_nodes.items():
             if nodes:
@@ -90,19 +120,6 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
                     sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
                     sup_command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodes)))
 
-    command="bppseqgen NAME=%s REP_SEQ=%s REP_TREE=%s NBCAT=%s number_of_sites=%s output.internal.sequences=%s " %(name,repseq.replace("//","/"), reptree, nbCAT,number_of_sites,outputInternalSequences)
-    if c1!=c2:
-        n1="\""+ ",".join(map(str,nodesWithAncestralModel))+"\""
-        n2="\""+ ",".join(map(str,nodesWithTransitions))+"\""
-        n3="\""+ ",".join(map(str,nodesWithConvergentModel))+"\""
-
-        command+="param=%s.bpp mod1Nodes=%s mod2Nodes=%s mod3Nodes=%s Ne1=%d Ne2=%d" %(repbppconfig+"/CATseq_sim_conv",n1,n2,n3,c1,c2)
-
-    else:
-        allNodes = nodesWithConvergentModel+nodesWithTransitions+nodesWithAncestralModel
-        n="\""+ ",".join(map(str,allNodes))+"\""
-        command+="param=%s.bpp mod1Nodes=%s Ne1=%d" %(repbppconfig+"/CATseq_sim_noconv", n,c1)
-
     command+=sup_command + " nonhomogeneous.number_of_models=%s " %(number_of_models)
     out = commands.getoutput(command)
     if debug_mode_bpp:
@@ -117,28 +134,43 @@ def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
                nodesWithConvergentModel, c1, c2, repseq, reptree, 
                repest, repbppconfig, NBCATest=10, suffix="",
                OneChange=True, ext = ".fa"):
-
-    n1="\""+ ",".join(map(str, nodesWithAncestralModel))+"\""
+    
     fasta_file = "%s/%s%s" %(repseq, name, ext)
-
     #logger.debug("fasta_file: %s",fasta_file )
+    
+    command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s REP_TREE=%s REP_EST=%s \"input.sequence.file=%s\" NBCAT=%s " %(repbppconfig+"/CATseq_estim.bpp", name, suffix, repseq, reptree, repest, fasta_file, NBCATest)
+    number_of_models = 0
+    
+    if nodesWithAncestralModel:
+        number_of_models +=1
+        command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
+        command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+
     if OneChange:
-        n2="\""+ ",".join(map(str, nodesWithConvergentModel))+"\""
-        n3="\""+ ",".join(map(str, nodesWithTransitions))+"\""
-        raw_command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s REP_TREE=%s REP_EST=%s mod1Nodes=%s mod2Nodes=%s  mod3Nodes=%s \"input.sequence.file=%s\" NBCAT=%s "%(repbppconfig+"/CATseq_OneChange.bpp",name,suffix,repseq,reptree,repest,n1,n2,n3,fasta_file,NBCATest)
-
-
+        if nodesWithTransitions:
+            number_of_models +=1
+            command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, c2)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitions)))
+        
+        if nodesWithConvergentModel:
+            number_of_models +=1
+            command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
     else:
-        n2="\""+ ",".join(map(str, nodesWithConvergentModel+nodesWithTransitions))+"\""
-        n3 = ""
-        raw_command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s REP_TREE=%s REP_EST=%s mod1Nodes=%s mod2Nodes=%s \"input.sequence.file=%s\" NBCAT=%s "%(repbppconfig+"/CATseq.bpp",name,suffix,repseq,reptree,repest,n1,n2,fasta_file,NBCATest)
+        nodesWithTransitionsAndWithConvergentModel = nodesWithTransitions+nodesWithConvergentModel
+        if nodesWithTransitionsAndWithConvergentModel:
+            number_of_models +=1
+            command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitionsAndWithConvergentModel)))
 
-    #command= raw_command + "Ne1=%d Ne2=%d" %(c1,c2)
-    command= raw_command + "Ne1=%d Ne2=%d" %(c1, c2)
+    command += "Ne1=%d Ne2=%d nonhomogeneous.number_of_models=%d " %(c1, c2, number_of_models)
+    
+    if debug_mode_bpp:
+        logger.debug("%s", command)
     out = commands.getoutput(command)
 
     if debug_mode_bpp:
-        logger.debug("%s\n%s\n%s", command, out, command)
+        logger.debug("%s\n%s", out, command)
 
     if "Number of sites retained...............: 0" in out:
         info_filename = "%s/%s_%s_%s%s.infos" %(repest, name , c1, c2, suffix)
@@ -171,6 +203,28 @@ def make_estim_conv(name, nodes, c1, repseq, reptree, repest,
 ##                     Configuration files                            ##
 ########################################################################
 
+#==> CATseq_estim.bpp <==
+CATseq_estim= """alphabet=Protein
+input.tree.file=$(REP_TREE)/tree.nhx
+input.tree.format=Nhx
+
+input.sequence.sites_to_use=all
+input.sequence.max_gap_allowed=90%
+
+nonhomogeneous = general
+nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
+rate_distribution=Constant()
+
+output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
+
+### estimation
+input.sequence.remove_saturated_sites=yes
+optimization.ignore_parameters=*
+
+output.infos=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).infos
+
+output.estimates=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).params
+"""
 #==> CATseq.bpp <==
 CATseq_bpp= """alphabet=Protein
 input.tree.file=$(REP_TREE)/tree.nhx
@@ -180,13 +234,13 @@ input.sequence.sites_to_use=all
 input.sequence.max_gap_allowed=20%
 
 nonhomogeneous = general
-nonhomogeneous.number_of_models = 2
+#nonhomogeneous.number_of_models = 2
 
-model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-model1.nodes_id=$(mod1Nodes)
+#model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
+#model1.nodes_id=$(mod1Nodes)
 
-model2=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
-model2.nodes_id=$(mod2Nodes)
+#model2=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
+#model2.nodes_id=$(mod2Nodes)
 
 nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 
@@ -213,10 +267,10 @@ input.tree.file=$(REP_TREE)/tree.nhx
 input.tree.format=Nhx
 
 input.sequence.sites_to_use=all
-input.sequence.max_gap_allowed=20%
+input.sequence.max_gap_allowed=90%
 
 nonhomogeneous = general
-nonhomogeneous.number_of_models = 3
+#nonhomogeneous.number_of_models = 3
 
 model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
 model1.nodes_id=$(mod1Nodes)
@@ -277,16 +331,16 @@ input.tree.format=Nhx
 nonhomogeneous = general
 #nonhomogeneous.number_of_models = 3
 
-model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-model1.nodes_id=$(mod1Nodes)
+#model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
+#model1.nodes_id=$(mod1Nodes)
 
 ### transition branches
-model2=OneChange(model=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT)))
-model2.nodes_id=$(mod2Nodes)
+#model2=OneChange(model=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT)))
+#model2.nodes_id=$(mod2Nodes)
 
 ### under those branches
-model3=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
-model3.nodes_id=$(mod3Nodes)
+#model3=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
+#model3.nodes_id=$(mod3Nodes)
 
 nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 
@@ -305,8 +359,8 @@ input.tree.format=Nhx
 nonhomogeneous = general
 #nonhomogeneous.number_of_models = 1
 
-model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-model1.nodes_id=$(mod1Nodes)
+#model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
+#model1.nodes_id=$(mod1Nodes)
 
 nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 

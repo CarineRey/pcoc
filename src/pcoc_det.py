@@ -202,7 +202,11 @@ ali_filename = args.ali
 
 l_n_sites = []
 
-ali = AlignIO.read(ali_filename, "fasta")
+if os.path.isfile(ali_filename):
+    ali = AlignIO.read(ali_filename, "fasta")
+else:
+    logger.error("%s does not exist", ali_filename)
+    sys.exit(1)
 
 logger.info("alignment ok after checking")
 
@@ -298,7 +302,7 @@ def reorder_l(l, order):
         new_l[p] = l[i]
     return new_l
 
-def mk_detect(tree_filename, ali_filename, OutDirName):
+def mk_detect(tree_filename, ali_basename, OutDirName):
     start_detec = time.time()
     metadata_simu_dico = {}
     logger.debug("Tree: %s", os.path.basename(tree_filename))
@@ -369,8 +373,8 @@ def mk_detect(tree_filename, ali_filename, OutDirName):
     l_TPFPFNTN_topo = []
     l_TPFPFNTN_obs_sub = []
 
-    if not os.path.isfile(ali_filename):
-        logger.error("%s does not exist", ali_filename)
+    if not os.path.isfile(repseq + "/" + ali_basename):
+        logger.error("%s does not exist", repseq + "/" + ali_basename)
         sys.exit(1)
 
     c1 = 1  # useless but compatibility
@@ -383,12 +387,14 @@ def mk_detect(tree_filename, ali_filename, OutDirName):
     for (e1,e2) in set_e1e2:
         logger.debug ("Estime e1: %s e2: %s", e1, e2)
         # Positif
-        bpp_lib.make_estim(ali_filename,nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="")
-        bpp_lib.make_estim(ali_filename,nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="")
+        if e1==e2:
+            bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="")
+        
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="")
 
 
     ### post proba
-    res, bilan = estim_data.dico_typechg_het_det(n_events,repest,repseq,ali_filename,  n_sites,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
+    res, bilan = estim_data.dico_typechg_het_det(n_events,repest,repseq,ali_basename,  n_sites,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
     l_TPFPFNTN_mod_het.extend(res)
 
     for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
@@ -487,7 +493,7 @@ def mk_detect(tree_filename, ali_filename, OutDirName):
     ### Plot
     if args.plot:
         if args.plot_complete_ali:
-            plot_data.make_tree_ali_detect_combi(reptree, ali_filename, prefix_out+"_plot_complete_ali.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+            plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete_ali.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
 
         for model in ["PCOC", "PC", "OC"]:
             if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
@@ -528,7 +534,7 @@ if __name__ == "__main__":
 
     #logger.info("alignment directory: %s", repseq)
 
-    ali_filename = os.path.basename(ali_filename)
+    ali_basename = os.path.basename(ali_filename)
     repest0 = OutDirName + "/Estimations"
     reptree0 = OutDirName + "/Trees"
     repfasta0 = OutDirName + "/fasta"
@@ -540,7 +546,7 @@ if __name__ == "__main__":
     if not os.path.exists(repfasta0):
         os.mkdir(repfasta0)
 
-    mk_detect(tree_filename, ali_filename, OutDirName)
+    mk_detect(tree_filename, ali_basename, OutDirName)
 
     logger.info("--- %s seconds ---", str(time.time() - start_time))
     logger.info("Output dir: %s", OutDirName)

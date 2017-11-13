@@ -30,7 +30,7 @@ RUN apt-get update && \
        libssl-dev \
        libcairo2-dev
 
-RUN pip install ete3
+RUN pip install ete3==3.0.0b35
 RUN pip install biopython
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/
