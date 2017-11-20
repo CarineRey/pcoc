@@ -6,19 +6,19 @@ The pcoc-toolkit is composed of 3 tools:
 
 * pcoc_sim.py: [(usage)](#pcoc_sim.py-usage)
 
-simulates alignment and converegent scenario data according the PCOC model for each tree of a directory.
+simulates an alignment and a scenario of convergent evolution according to the PCOC model for each tree of a directory.
 
 
 * pcoc_det.py: [(usage)](#pcoc_det.py-usage)
 
-detects sites of an alignment with a a convergent evolution according the PCOC model.
-It needs, an input alignment, an imput tree and the number of the nodes where occured the convergent transitions
+detects sites of an alignment under convergent evolution according to the PCOC model.
+It requires an input alignment, an input tree and the number of nodes where the convergent transitions occurred.
 
 
 
 * pcoc_num_tree.py: [(usage)](#pcoc_num_tree.py-usage)
 
-allows to numerote an input tree to help the user to manually enter the number of his nodes of interest in pcoc_sim.py and pcoc_det.py
+allows a user to number the nodes of an input tree so as to set the nodes where convergent transitions occurred in pcoc_sim.py and pcoc_det.py
 
 
 
@@ -26,19 +26,19 @@ allows to numerote an input tree to help the user to manually enter the number o
 
 docker is the easiest way to use the pcoc-toolkit locally.
 
-For example to use pcoc_sim.py, without instalation you just have to type:
+For example to use pcoc_sim.py, without installation you just have to type:
 
  * If you want to have user permission on output files:
- 
+
 ```
-# run as user (to have user permision on output files)
+# run as user (to have user permission on output files)
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc [tool].py [options]
 ```
 
  * If you want to have root permission on output files:
- 
+
 ```
-# run as root (to have root permision on output files)
+# run as root (to have root permission on output files)
 docker run -v $PWD:$PWD --rm carinerey/pcoc [tool].py [options]
 ```
 
@@ -47,7 +47,7 @@ To get all options:
 ```docker run --rm carinerey/pcoc```
 
 
-or for a tool:
+or only for a specific tool:
 
 ```docker run --rm carinerey/pcoc [tool].py -h```
 
@@ -70,20 +70,20 @@ wget https://raw.githubusercontent.com/Ensembl/ensembl-compara/release/89/script
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_sim.py -td $PWD/trees -o $PWD/output_pcoc --pcoc --topo --ident
 ```
 
-Results will can be found in $PWD/output_pcoc/RUN_yyyymmdd_hhmmss/
+Results will be found in $PWD/output_pcoc/RUN_yyyymmdd_hhmmss/
 
-We will find:
+You will find:
 
-  * Run_metadata.tsv: a tabular file with metada about this run
-  * Tree_metadata.tsv: a tabular file with metada about all input trees
+  * Run_metadata.tsv: a tabular file with metadata about this run
+  * Tree_metadata.tsv: a tabular file with metadata about all input trees
   * Tree_#: for each input tree a directory containing results for this input tree:
 
-    * Metadata_Scenarios.tsv: a tabular file with metada about this input tree
-    * BenchmarkResults.tsv: a tabular file which summarize the number of TP/FP/TN/FN/... for each used methods (--pcoc/--ident/--topo) for different thresholds and for different couple of profile use to simulate the data ( see --nb_sampled_couple, min_dist_CAT) 
+    * Metadata_Scenarios.tsv: a tabular file with metadata about this input tree
+    * BenchmarkResults.tsv: a tabular file which summarizes the number of TP/FP/TN/FN/... for each used methods (--pcoc/--ident/--topo), for different thresholds, and for different couples of profiles used to simulate the data ( see --nb_sampled_couple, min_dist_CAT)
     * nw_trees:  a directory containing for each scenario the newick formated tree
-    * sequences:  a directory containing for each scenario, all simulated sequences (the option --no_clean_seqs must be used)
+    * sequences:  a directory containing for each scenario, all simulated alignments (the option --no_clean_seqs must be used, otherwise the sequences are discarded)
     * likelihood_summaries:  a directory containing for each scenario, likelihood summaries (the option --get_likelihood_summaries must be used)
-    * plot_tree_ali:  a directory containing for each scenario, a plot with the tree, the alignment and the posterior probabilities per site for each used methods (the option --plot_ali must be used)
+    * plot_tree_ali:  a directory containing for each scenario, a plot with the tree, the alignment and the posterior probabilities per site for each used method (the option --plot_ali must be used)
 
 ## Detection:
 
@@ -101,10 +101,10 @@ wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/ali
 ali=$PWD/data/SLC26A5.fasta
 
 
-## First identify node with convergent phenotype with pcoc_num_tree.py
+## First identify the nodes with convergent transitions with pcoc_num_tree.py
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/num_tree.pdf
 
-## In the num_tree.pdf, get the numbers of the branch with the convergent transitions
+## In the num_tree.pdf, get the numbers of the branches with the convergent transitions
 ## You can check your combination using the -m parameter
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/colored_num_tree.pdf -m 0/3
 
@@ -118,22 +118,22 @@ docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder
 
 
-## another example with several convergent branch
+## another example with several convergent branches
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 2,0,1/11,9,10/6 --plot
 
 
 ```
-Results will can be found in $PWD/output_pcoc_det/RUN_yyyymmdd_hhmmss/
+Results will be found in $PWD/output_pcoc_det/RUN_yyyymmdd_hhmmss/
 
-We will find:
+You will find:
 
-  * Run_metadata.tsv: a tabular file with metada about this run
+  * Run_metadata.tsv: a tabular file with metadata about this run
   * pcoc_det.log: a log file
   * ali.results.tsv: a tabular file with posterior probabilities for each position according the PCOC models
   * ali.filtered_results.tsv: the same file but filtered for positions with a posterior probability superior to the threshold of one of the PCOC models (see -f/-f_pcoc/-f_pc/-f_oc)
   * fasta: a directory containing filtered position fasta (only if --no_cleanup_fasta has been used)
-  * ali_plot_complete_ali.pdf: a plot of the tree, the complete alignment and the posterior probability according PCOC models (only if --plot_complete_ali has been used)
-  * ali_plot_filtered_ali_PCOC.pdf: the same plot as ali_plot_complete_ali.pdf but filtered for the positions with a posterior probability according the PCOC model above its threshold (only if --plot)
+  * ali_plot_complete_ali.pdf: a plot of the tree, the complete alignment and the posterior probability according to PCOC models (only if --plot_complete_ali has been used)
+  * ali_plot_filtered_ali_PCOC.pdf: the same plot as ali_plot_complete_ali.pdf but filtered for the positions with a posterior probability according to the PCOC model above its threshold (only if --plot)
   * ali_plot_filtered_ali_PC.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but for the PC model (only if --plot)
   * ali_plot_filtered_ali_OC.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but for the OC model (only if --plot)
   * ali_plot_filtered_ali_union.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but filtered for the positions with a posterior probability according one of the PCOC models above its threshold (only if --plot)
@@ -319,4 +319,3 @@ Options:
                         number and independent events must be separed by a
                         "/". ex: "1,2,3/67/55,56" (default: None)
 ```
-
