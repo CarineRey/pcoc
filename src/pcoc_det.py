@@ -386,11 +386,10 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             set_e1e2.append((e1,e2))
     for (e1,e2) in set_e1e2:
         logger.debug ("Estime e1: %s e2: %s", e1, e2)
+        tree_fn = reptree + "/tree.nhx"
         # Positif
-        if e1==e2:
-            bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="")
-        
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, reptree, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="")
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="")
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="")
 
 
     ### post proba
@@ -485,8 +484,6 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     df_bilan_f = df_bilan[df_bilan.pos.isin(all_filtered_position)]
     df_bilan_f = df_bilan_f.copy()
     
-    df_bilan["pos"] = df_bilan["pos"] + 1
-    df_bilan_f["pos"] = df_bilan_f["pos"] + 1
     df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
     df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
 

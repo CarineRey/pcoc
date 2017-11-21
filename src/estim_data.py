@@ -280,6 +280,7 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             # p_mean:
             mean_X   = likelihood_mean(X_l  [s][k])
             bilan[k]["mean_X"].append(mean_X)
+            logger.debug(XY_l [s][k])
             mean_XY  = likelihood_mean(XY_l [s][k])
             bilan[k]["mean_XY"].append(mean_XY)
             mean_OX  = likelihood_mean(OX_l [s][k])
@@ -404,7 +405,6 @@ def dico_typechg_het_det(N,repest,repseq,ali_filename, n_sites, tree="", NbCat_E
                XY_l [s][k].append(XY)
                OX_l [s][k].append(OX)
                OXY_l[s][k].append(OXY)
-
     # Bilan
     for s in lsites:
         for k in [12]:
@@ -435,6 +435,7 @@ def dico_typechg_het_det(N,repest,repseq,ali_filename, n_sites, tree="", NbCat_E
             bilan[k]["mean_OXY"].append(mean_OXY)
 
             bilan[k]["p_mean_X_XY"].append(   prob_ap_no_log(mean_XY, mean_X)  )
+            logger.debug("s: %s, XY %s, X %s, p_mean_X_XY %s", s,  mean_XY, mean_X, bilan[k]["p_mean_X_XY"][-1])
             bilan[k]["p_mean_OX_OXY"].append( prob_ap_no_log(mean_OXY,mean_OX) )
             bilan[k]["p_mean_X_OXY"].append(  prob_ap_no_log(mean_OXY,mean_X)  )
             bilan[k]["p_mean_X_OX"].append(   prob_ap_no_log(mean_OX, mean_X)  )

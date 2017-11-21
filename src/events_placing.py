@@ -20,8 +20,13 @@
 #  
 
 import random
+import numpy as np
 from ete3 import Tree, TreeStyle, TextFace, NodeStyle
 import itertools
+
+
+import logging
+logger = logging.getLogger("simul_CAT_rand.placing")
 
 
 # Basic tree style
@@ -73,6 +78,64 @@ def add_t(node):
 
     node.add_face(nd, column=0, position = "float")
     node.add_face(nd2, column=1, position = "float")
+
+def build_conv_topo(annotated_tree, vnodes):
+
+      tconv = annotated_tree.copy(method="deepcopy")
+      for n in tconv.iter_leaves():
+        n.add_features(L=1)
+      for n in tconv.traverse():
+        n.add_features(COPY=0)
+      # get the most recent ancestral node of all the convergent clades
+      l_convergent_clades = tconv.search_nodes(T=True)
+      common_anc_conv=tconv.get_common_ancestor(l_convergent_clades)
+
+      # duplicate it at its same location (branch lenght = 0). we get
+      # a duplicated subtree with subtrees A and B (A == B)
+
+      dist_dup = common_anc_conv.dist
+      if not common_anc_conv.is_root():
+        dup_point = common_anc_conv.add_sister(name="dup_point",dist=0.000001)
+        dup_point_root = False
+      else:
+        dup_point = Tree()
+        dup_point_root = True
+        dup_point.dist=0.000001
+
+      dup_point.add_features(ND=0,T=False, C=False, Cz=False)
+
+      common_anc_conv.detach()
+      common_anc_conv_copy = common_anc_conv.copy(method="deepcopy")
+
+      # tag duplicated nodes:
+
+      for n in common_anc_conv_copy.traverse():
+        n.COPY=1
+        if n.ND not in vnodes and not n.is_root():
+            n.dist=0.000001
+
+      # pruned A from all branches not leading to any convergent clade
+      l_leaves_to_keep_A = common_anc_conv.search_nodes(COPY=0, C=False, L=1)
+      #logger.debug("A: %s",l_leaves_to_keep_A)
+      common_anc_conv.prune(l_leaves_to_keep_A, preserve_branch_length=True)
+
+      # pruned B from all branches not leading to any non-convergent clade
+      l_leaves_to_keep_B = common_anc_conv_copy.search_nodes(COPY=1, C=True, L=1)
+      #logger.debug("B : %s", l_leaves_to_keep_B)
+      common_anc_conv_copy.prune(l_leaves_to_keep_B, preserve_branch_length=True)
+
+
+      dup_point.add_child(common_anc_conv_copy)
+      dup_point.add_child(common_anc_conv)
+
+      tconv = dup_point.get_tree_root()
+
+      nodeId = 0
+      for node in tconv.traverse("postorder"):
+          node.ND = nodeId
+          nodeId += 1
+      
+      return tconv
 
 def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWithTransitions, flg = 1, bl_new = -1, topo_met = False, plot = False, cz_nodes = {}):
 
@@ -146,60 +209,8 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
   if not topo_met:
       tconv = None
   else:
-      tconv = annotated_tree.copy(method="deepcopy")
-      for n in tconv.iter_leaves():
-        n.add_features(L=1)
-      for n in tconv.traverse():
-        n.add_features(COPY=0)
-      # get the most recent ancestral node of all the convergent clades
-      l_convergent_clades = tconv.search_nodes(T=True)
-      common_anc_conv=tconv.get_common_ancestor(l_convergent_clades)
-
-      # duplicate it at its same location (branch lenght = 0). we get
-      # a duplicated subtree with subtrees A and B (A == B)
-
-      dist_dup = common_anc_conv.dist
-      if not common_anc_conv.is_root():
-        dup_point = common_anc_conv.add_sister(name="dup_point",dist=0.000001)
-        dup_point_root = False
-      else:
-        dup_point = Tree()
-        dup_point_root = True
-        dup_point.dist=0.000001
-
-      dup_point.add_features(ND=0,T=False, C=False, Cz=False)
-
-      common_anc_conv.detach()
-      common_anc_conv_copy = common_anc_conv.copy(method="deepcopy")
-
-      # tag duplicated nodes:
-
-      for n in common_anc_conv_copy.traverse():
-        n.COPY=1
-        if n.ND not in vnodes and not n.is_root():
-            n.dist=0.000001
-
-      # pruned A from all branches not leading to any convergent clade
-      l_leaves_to_keep_A = common_anc_conv.search_nodes(COPY=0, C=False, L=1)
-      #logger.debug("A: %s",l_leaves_to_keep_A)
-      common_anc_conv.prune(l_leaves_to_keep_A, preserve_branch_length=True)
-
-      # pruned B from all branches not leading to any non-convergent clade
-      l_leaves_to_keep_B = common_anc_conv_copy.search_nodes(COPY=1, C=True, L=1)
-      #logger.debug("B : %s", l_leaves_to_keep_B)
-      common_anc_conv_copy.prune(l_leaves_to_keep_B, preserve_branch_length=True)
-
-
-      dup_point.add_child(common_anc_conv_copy)
-      dup_point.add_child(common_anc_conv)
-
-      tconv = dup_point.get_tree_root()
-
-      nodeId = 0
-      for node in tconv.traverse("postorder"):
-          node.ND = nodeId
-          nodeId += 1
-
+      tconv = build_conv_topo(annotated_tree, nodesWithConvergentModel+nodesWithTransitions)
+      
       if cz_nodes:
           tconv.write(format=1, features=["ND","T","C","Cz"],outfile="%s/annotated_tree_conv.nhx"%(reptree),format_root_node=True)
       else:
@@ -228,10 +239,6 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
 
   return (annotated_tree, tconv, allbranchlength, convbranchlength)
 
-
-
-import logging
-logger = logging.getLogger("simul_CAT_rand.placing")
 
 
 def unlist(list2d):
@@ -395,6 +402,24 @@ def noise_tree(tree_ini, NbCat = 10):
     logger.debug( "(numberOfLeafs fin: %s)", numberOfLeafs)
 
     return tree, cz_nodes, r_cz
+
+
+def noise_bl(tree, reptree, vnodes=None, topo_met=False):
+    noisy_tree =tree.copy(method="deepcopy")
+    
+    for n in noisy_tree.traverse("postorder"):
+        random_err = np.random.exponential(1)
+        n.dist = n.dist * random_err
+    
+    if not topo_met:
+        tconv = None
+    else:
+        print vnodes
+        print noisy_tree
+        noisy_tconv = build_conv_topo(noisy_tree, vnodes)
+        noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
+    
+    noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
 
 def placeNTransitionsInTree_new(numTransitions, maxTransitions, maxConvRate, tree_ini, manual_mode_nodes = {}, nf=""):
 

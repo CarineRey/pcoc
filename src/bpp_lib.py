@@ -21,12 +21,13 @@
 
 #import subprocess
 import commands
+import os
 
 import logging
 logger = logging.getLogger("pcoc.bpp_lib")
 
 
-debug_mode_bpp = True
+debug_mode_bpp = False
 
 ########################################################################
 ##                    Functions                                       ##
@@ -61,20 +62,23 @@ def write_config(d, estim=True, NbCat=""):
 ########################################################################
 
 def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
-               nodesWithConvergentModel, c1, c2, repseq, reptree,
+               nodesWithConvergentModel, c1, c2, repseq, tree_fn,
                repbppconfig, number_of_sites=1000,
                outputInternalSequences="yes", nbCAT=10,
                cz_nodes={}, CzOneChange=True):
+                   
+    if not os.path.isfile(tree_fn):
+        logger.error("%s is not a file", tree_fn)
+    
+    fasta_outfile = "%s/%s%s" %(repseq.replace("//","/"), name, ".fa")
+        
+        
     if outputInternalSequences != "yes":
         outputInternalSequences = "no"
 
-    if c1 != c2:
-        number_of_models = 3
-    else:
-        number_of_models = 1
+    number_of_models = 0
 
-
-    command="bppseqgen NAME=%s REP_SEQ=%s REP_TREE=%s NBCAT=%s number_of_sites=%s output.internal.sequences=%s " %(name,repseq.replace("//","/"), reptree, nbCAT,number_of_sites,outputInternalSequences)
+    command="bppseqgen FASTA_OUT=%s TREE=%s NBCAT=%s number_of_sites=%s output.internal.sequences=%s " %(fasta_outfile, tree_fn, nbCAT,number_of_sites,outputInternalSequences)
     
     if c1!=c2:
         if nodesWithAncestralModel:
@@ -84,21 +88,20 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
         if nodesWithTransitions:
             number_of_models +=1
             command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitions)))
         if nodesWithConvergentModel:
-            n3="\""+ ",".join(map(str,nodesWithConvergentModel))+"\""
             number_of_models +=1
             command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
             command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
 
-        command+="param=%s.bpp Ne1=%d Ne2=%d" %(repbppconfig+"/CATseq_sim_conv",c1,c2)
+        command+=" param=%s.bpp Ne1=%d Ne2=%d " %(repbppconfig+"/CATseq_sim_conv",c1,c2)
 
     else:
         allNodes = nodesWithConvergentModel+nodesWithTransitions+nodesWithAncestralModel
         number_of_models +=1
         command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
         command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, allNodes)))
-        command+="param=%s.bpp Ne1=%d" %(repbppconfig+"/CATseq_sim_noconv", c1)
+        command+=" param=%s.bpp Ne1=%d " %(repbppconfig+"/CATseq_sim_noconv", c1)
 
 
     # If noisy profiles
@@ -131,14 +134,19 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
 ########################################################################
 
 def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
-               nodesWithConvergentModel, c1, c2, repseq, reptree, 
+               nodesWithConvergentModel, c1, c2, repseq, tree_fn, 
                repest, repbppconfig, NBCATest=10, suffix="",
                OneChange=True, ext = ".fa"):
-    
+
     fasta_file = "%s/%s%s" %(repseq, name, ext)
     #logger.debug("fasta_file: %s",fasta_file )
     
-    command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s REP_TREE=%s REP_EST=%s \"input.sequence.file=%s\" NBCAT=%s " %(repbppconfig+"/CATseq_estim.bpp", name, suffix, repseq, reptree, repest, fasta_file, NBCATest)
+    if not os.path.isfile(tree_fn):
+        logger.error("%s is not a file", tree_fn)
+    if not os.path.isfile(fasta_file):
+        logger.error("%s is not a file", fasta_file)
+    
+    command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s \"input.sequence.file=%s\" NBCAT=%s " %(repbppconfig+"/CATseq_estim.bpp", name, suffix, repseq, tree_fn, repest, fasta_file, NBCATest)
     number_of_models = 0
     
     if nodesWithAncestralModel:
@@ -164,7 +172,7 @@ def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
             command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitionsAndWithConvergentModel)))
 
     command += "Ne1=%d Ne2=%d nonhomogeneous.number_of_models=%d " %(c1, c2, number_of_models)
-    
+
     if debug_mode_bpp:
         logger.debug("%s", command)
     out = commands.getoutput(command)
@@ -178,14 +186,20 @@ def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
         f_infos = open(info_filename,"w")
         f_infos.close()
 
-def make_estim_conv(name, nodes, c1, repseq, reptree, repest,
+def make_estim_conv(name, nodes, c1, repseq, tree_fn, repest,
                     repbppconfig, suffix="", NBCATest=10):
-
+    
+    fasta_file = "%s/%s%s" %(repseq, name, ".fa")
+    if not os.path.isfile(tree_fn):
+        logger.error("%s is not a file", tree_fn)
+    if not os.path.isfile(fasta_file):
+        logger.error("%s is not a file", fasta_file)
+        
     allNodes=nodes
 
     n1="\""+ ",".join(map(str, allNodes))+"\""
 
-    command="bppml param=%s NAME=%s  SUFFIX=%s REP_SEQ=%s REP_TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \"input.sequence.file=%s/%s.fa\" "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, reptree, repest, n1, c1, NBCATest, repseq, name)
+    command="bppml param=%s NAME=%s  SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \"input.sequence.file=%s\" "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, tree_fn, repest, n1, c1, NBCATest, fasta_file)
 
     out = commands.getoutput(command)
 
@@ -205,7 +219,7 @@ def make_estim_conv(name, nodes, c1, repseq, reptree, repest,
 
 #==> CATseq_estim.bpp <==
 CATseq_estim= """alphabet=Protein
-input.tree.file=$(REP_TREE)/tree.nhx
+input.tree.file=$(TREE)
 input.tree.format=Nhx
 
 input.sequence.sites_to_use=all
@@ -214,79 +228,6 @@ input.sequence.max_gap_allowed=90%
 nonhomogeneous = general
 nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 rate_distribution=Constant()
-
-output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
-
-### estimation
-input.sequence.remove_saturated_sites=yes
-optimization.ignore_parameters=*
-
-output.infos=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).infos
-
-output.estimates=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).params
-"""
-#==> CATseq.bpp <==
-CATseq_bpp= """alphabet=Protein
-input.tree.file=$(REP_TREE)/tree.nhx
-input.tree.format=Nhx
-
-input.sequence.sites_to_use=all
-input.sequence.max_gap_allowed=20%
-
-nonhomogeneous = general
-#nonhomogeneous.number_of_models = 2
-
-#model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-#model1.nodes_id=$(mod1Nodes)
-
-#model2=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
-#model2.nodes_id=$(mod2Nodes)
-
-nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
-
-rate_distribution=Constant()
-
-### simulation
-#output.sequence.file=$(REP_SEQ)/$(NAME).fa
-
-output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
-
-### estimation
-input.sequence.remove_saturated_sites=yes
-optimization.ignore_parameters=*
-
-output.infos=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).infos
-
-output.estimates=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).params
-"""
-
-#==> CATseq_OneChange.bpp <==
-CATseq_OneChange_bpp = """alphabet=Protein
-
-input.tree.file=$(REP_TREE)/tree.nhx
-input.tree.format=Nhx
-
-input.sequence.sites_to_use=all
-input.sequence.max_gap_allowed=90%
-
-nonhomogeneous = general
-#nonhomogeneous.number_of_models = 3
-
-model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-model1.nodes_id=$(mod1Nodes)
-
-model2=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT))
-model2.nodes_id=$(mod2Nodes)
-
-model3=OneChange(model=LGL08_CAT_C$(Ne2)(nbCat=$(NBCAT)))
-model3.nodes_id=$(mod3Nodes)
-
-nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
-
-rate_distribution=Constant()
-
-### simulation
-#output.sequence.file=$(REP_SEQ)/$(NAME).fa
 
 output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
 
@@ -302,7 +243,7 @@ output.estimates=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).params
 #==> CATseq_conv.bpp <==
 CATseq_conv_bpp = """alphabet=Protein
 
-input.tree.file=$(REP_TREE)/tree_conv.nhx
+input.tree.file=$(TREE)
 input.tree.format=Nhx
 
 nonhomogeneous = general
@@ -325,7 +266,7 @@ output.infos=$(REP_EST)/$(NAME)_topo$(SUFFIX).infos
 #==> CATseq_sim_conv.bpp <==
 CATseq_sim_conv_bpp = """alphabet=Protein
 
-input.tree.file=$(REP_TREE)/tree.nhx
+input.tree.file=$(TREE)
 input.tree.format=Nhx
 
 nonhomogeneous = general
@@ -347,13 +288,13 @@ nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 #rate_distribution=Constant()
 rate_distribution=Gamma(n=4)
 ### simulation
-output.sequence.file=$(REP_SEQ)/$(NAME).fa
+output.sequence.file=$(FASTA_OUT)
 """
 
 #==> CATseq_sim_noconv.bpp <==
 CATseq_sim_noconv_bpp = """alphabet=Protein
 
-input.tree.file=$(REP_TREE)/tree.nhx
+input.tree.file=$(TREE)
 input.tree.format=Nhx
 
 nonhomogeneous = general
@@ -368,7 +309,7 @@ nonhomogeneous.root_freq=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
 rate_distribution=Gamma(n=4)
 
 ### simulation
-output.sequence.file=$(REP_SEQ)/$(NAME).fa
+output.sequence.file=$(FASTA_OUT)
 """
 
 
