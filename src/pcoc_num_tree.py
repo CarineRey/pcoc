@@ -20,6 +20,7 @@
 #
 #
 
+import os
 import argparse
 import time
 from ete3 import Tree, NodeStyle, TreeStyle, TextFace
@@ -79,6 +80,11 @@ nstyle["size"] = 0
 nstyle_L = NodeStyle()
 nstyle_L["fgcolor"] = "black"
 nstyle_L["size"] = 0
+
+if not os.path.is_file(args.tree):
+    print ("%s does not exist" %args.tree)
+    sys.err(1)
+    
 
 tree = init_tree(args.tree)
 
