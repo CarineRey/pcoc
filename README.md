@@ -154,9 +154,9 @@ You will find:
 usage: pcoc_sim.py [-h] [--version] [-cpu CPU] -td TREE_DIR -o OUTPUT_DIR
                    [-n_sc INT] [-m "x/y,z/..."] [-c_max INT] [-c INT]
                    [-c_min INT] [-cr FLOAT] [-flg FLOAT] [-bl_new FLOAT]
-                   [--no_noise] [-nb_sampled_couple NB_SAMPLED_COUPLE]
-                   [-n_sites N_SITES] [-CATX_sim {10,60}]
-                   [-min_dist_CAT FLOAT] [--plot_ali]
+                   [--ali_noise] [--bl_noise]
+                   [-nb_sampled_couple NB_SAMPLED_COUPLE] [-n_sites N_SITES]
+                   [-CATX_sim {10,60}] [-min_dist_CAT FLOAT] [--plot_ali]
                    [--get_likelihood_summaries] [--no_clean_seqs]
                    [-CATX_est {10,60}] [--pcoc] [--ident] [--topo]
                    [--plot_event_repartition] [--no_cleanup]
@@ -174,7 +174,7 @@ required arguments:
                         Output directory name. (Default output)
 
 Convergent scenarios simulation options:
-  -n_sc INT           Number of convergent scenarios draw up from each input
+  -n_sc INT             Number of convergent scenarios draw up from each input
                         tree. (default: 1)
   -m "x/y,z/...", --manual_mode "x/y,z/..."
                         User defined convergent transition/branches.
@@ -197,7 +197,9 @@ Convergent scenarios simulation options:
                         (default: no modification)
   -bl_new FLOAT         For each input tree, replace all branch lengths by
                         [FLOAT]. (default: no modification)
-  --no_noise            Do not add noisy events in the convergent scenario.
+  --ali_noise           Add noisy events in the convergent scenario.
+  --bl_noise            Add noise in the branch lengths of of tree for the
+                        detection process.
 
 Alignment simulation options:
   -nb_sampled_couple NB_SAMPLED_COUPLE
@@ -239,6 +241,7 @@ Options:
                         library must be present in the $PATH and in the
                         LD_LIBRARY_PATH
   --debug               debug mode
+
 ```
 
 ## pcoc_det.py usage:
