@@ -280,7 +280,6 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             # p_mean:
             mean_X   = likelihood_mean(X_l  [s][k])
             bilan[k]["mean_X"].append(mean_X)
-            logger.debug(XY_l [s][k])
             mean_XY  = likelihood_mean(XY_l [s][k])
             bilan[k]["mean_XY"].append(mean_XY)
             mean_OX  = likelihood_mean(OX_l [s][k])
@@ -297,11 +296,13 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             #logger.debug("mean_X: %s max_X:%s", bilan[k]["mean_X"][s], bilan[k]["max_X"][s])
             #logger.debug("mean_XY: %s max_XY:%s", bilan[k]["mean_XY"][s], bilan[k]["max_XY"][s])
             #logger.debug("p_mean_X_XY: %s p_max_X_XY:%s", bilan[k]["p_mean_X_XY"][s], bilan[k]["p_max_X_XY"][s])
-            logger.debug("mean_X: %s", bilan[k]["mean_X"][s])
-            logger.debug("mean_XY: %s", bilan[k]["mean_XY"][s])
-            logger.debug("mean_OXY: %s", bilan[k]["mean_OXY"][s])
-            logger.debug("mean_OX: %s", bilan[k]["mean_OX"][s])
+            #logger.debug("mean_X: %s", bilan[k]["mean_X"][s])
+            #logger.debug("mean_XY: %s", bilan[k]["mean_XY"][s])
+            #logger.debug("mean_OXY: %s", bilan[k]["mean_OXY"][s])
+            #logger.debug("mean_OX: %s", bilan[k]["mean_OX"][s])
             logger.debug("p_mean_X_XY: %s", bilan[k]["p_mean_X_XY"][s])
+            logger.debug("p_mean_X_OX: %s", bilan[k]["p_mean_X_OX"][s])
+            logger.debug("p_mean_X_OXY: %s", bilan[k]["p_mean_X_OXY"][s])
             #logger.debug("p_mean_OX_OXY: %s p_max_OX_OXY:%s", bilan[k]["p_mean_OX_OXY"][s], bilan[k]["p_max_OX_OXY"][s])
     # Calcul (VP, FP, FN, VN)
     res = []
@@ -730,13 +731,13 @@ def dico_typechg_topo(C1, C2, N, repest, name_AC, tree = "", set_t1 = [], n_site
 
         infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos"%(repest,simu_i,C1,C2,t1,t1)
         infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos"%(repest,simu_i,C1,C2,t1)
+        
 
         ### read infos
         dli[11][12]=read_info_exception(infosC1C1T1_file,n_sites, "noOneChange", 11, 12)
         dli[11][11]=read_info_exception(infosC1C1E1E1_file,n_sites, "noOneChange", 11, 11)
         dli[12][12]=read_info_exception(infosC1C2T1OPT_file,n_sites, "noOneChange", 12, 12)
         dli[12][11]=read_info_exception(infosC1C2E1E1_file,n_sites, "noOneChange", 12, 11)
-
 
         for s in lsites:
             for k in [11,12]:
@@ -769,7 +770,7 @@ def dico_typechg_topo(C1, C2, N, repest, name_AC, tree = "", set_t1 = [], n_site
 
             #logger.debug("mean_X: %s max_X:%s", bilan[k]["mean_X"][s], bilan[k]["max_X"][s])
             #logger.debug("mean_CX: %s max_CX:%s", bilan[k]["mean_CX"][s], bilan[k]["max_CX"][s])
-            #logger.debug("p_mean_X_CX: %s p_max_X_CX:%s", bilan[k]["p_mean_X_CX"][s], bilan[k]["p_max_X_CX"][s])
+            logger.debug("p_mean_X_CX: %s p_max_X_CX:%s", bilan[k]["p_mean_X_CX"][s], bilan[k]["p_max_X_CX"][s])
 
     # Calcul (VP, FP, FN, VN)
     res = []

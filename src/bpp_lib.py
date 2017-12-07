@@ -199,7 +199,7 @@ def make_estim_conv(name, nodes, c1, repseq, tree_fn, repest,
 
     n1="\""+ ",".join(map(str, allNodes))+"\""
 
-    command="bppml param=%s NAME=%s  SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \"input.sequence.file=%s\" "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, tree_fn, repest, n1, c1, NBCATest, fasta_file)
+    command="bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \"input.sequence.file=%s\" "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, tree_fn, repest, n1, c1, NBCATest, fasta_file)
 
     out = commands.getoutput(command)
 
