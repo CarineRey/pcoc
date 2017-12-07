@@ -261,6 +261,7 @@ input.sequence.remove_saturated_sites=yes
 optimization.ignore_parameters=*
 
 output.infos=$(REP_EST)/$(NAME)_topo$(SUFFIX).infos
+output.estimates=$(REP_EST)/$(NAME)_topo$(SUFFIX).params
 """
 
 #==> CATseq_sim_conv.bpp <==

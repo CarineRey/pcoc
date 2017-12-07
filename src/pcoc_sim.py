@@ -600,9 +600,9 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                 # Test optimal
 
                 # Positif
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,treeconv_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
                 # Negatif
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,treeconv_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
+                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
             
             if args.topo or args.pcoc:
                 ### estimations C1C2 et C1C1 ave E1: 1->10 et E2: 1-> 10
@@ -699,7 +699,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                     bpp_lib.make_estim_conv(nameA,nodes,t1,repseq,treeconv_fn_estim,repest,repbppconfig,suffix="_t"+str(t1), NBCATest=NbCat_Est)
 
 
-                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2,n_events,repest,nameAC, set_t1 =set_t1, tree = os.path.basename(tree_filename), n_sites = Nsites, ID = date,NbCat_Est = NbCat_Est, dist_C1_C2 = dist_C1_C2)
+                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2,n_events,repest,nameAC, set_t1=set_t1, tree=os.path.basename(tree_filename), n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
                 l_TPFPFNTN_topo.extend(res_topo)
                 
                 for k in [11,12]:
