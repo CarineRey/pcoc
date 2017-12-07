@@ -414,10 +414,8 @@ def noise_bl(tree, reptree, vnodes=None, topo_met=False):
     if not topo_met:
         tconv = None
     else:
-        print vnodes
-        print noisy_tree
         noisy_tconv = build_conv_topo(noisy_tree, vnodes)
-        noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
+        noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
     
     noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
 
