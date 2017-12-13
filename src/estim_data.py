@@ -23,6 +23,7 @@ import math
 import os
 import re
 from Bio import AlignIO
+from ete3 import Tree
 import logging
 logger = logging.getLogger("pcoc.estim_data")
 
@@ -33,7 +34,7 @@ def read_info(nf, n_sites):
     f=open(nf, "r")
     ll=[]
     i=1
-    logger.debug(nf)
+    #logger.debug(nf)
     for l in f:
         if l[0]!="S":
             el = l.split()
@@ -55,9 +56,11 @@ def read_info(nf, n_sites):
 def read_info_exception(f, n_sites, O, NorP, C1C1_C1C2):
     res = [None]*n_sites
     if os.path.exists(f):
-        logger.debug("%s exists", f)
+        #logger.debug("%s exists", f)
+        pass
     else:
         logger.debug("%s does not exist", f)
+        pass
     try:
         res = read_info(f, n_sites)
     except:
@@ -94,7 +97,7 @@ def likelihood_mean(x):
         if z:
             l.append(math.exp(z))
     if l:
-        return(float(sum(l))/max(len(l),1))
+        return(float(sum(l))/len(l))
     else:
         return None
 
@@ -232,7 +235,7 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
                 continue
         dli = {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
         for O in ["withOneChange","noOneChange"]: 
-            logger.debug ("Count e1: %s e2: %s O: %s", e1, e2,O)
+            #logger.debug ("Count e1: %s e2: %s O: %s", e1, e2,O)
             infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C1,e1,e1,O)
             infosC1C1E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C1,e1,e2,O)
             infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C2,e1,e1,O)
@@ -252,8 +255,8 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
                XY  = dli["noOneChange"][k][12][s]
                OX  = dli["withOneChange"][k][11][s]
                OXY = dli["withOneChange"][k][12][s]
-               
-               X_l  [s][k].append(X)              
+
+               X_l  [s][k].append(X)
                XY_l [s][k].append(XY)
                OX_l [s][k].append(OX)
                OXY_l[s][k].append(OXY)
@@ -300,9 +303,10 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             #logger.debug("mean_XY: %s", bilan[k]["mean_XY"][s])
             #logger.debug("mean_OXY: %s", bilan[k]["mean_OXY"][s])
             #logger.debug("mean_OX: %s", bilan[k]["mean_OX"][s])
-            logger.debug("p_mean_X_XY: %s", bilan[k]["p_mean_X_XY"][s])
-            logger.debug("p_mean_X_OX: %s", bilan[k]["p_mean_X_OX"][s])
-            logger.debug("p_mean_X_OXY: %s", bilan[k]["p_mean_X_OXY"][s])
+            logger.debug("k: %s, mean_X: %s, mean_XY: %s, p_mean_X_XY: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_XY"][s], bilan[k]["p_mean_X_XY"][s])
+            #logger.debug("p_mean_X_XY: %s", bilan[k]["p_mean_X_XY"][s])
+            #logger.debug("p_mean_X_OX: %s", bilan[k]["p_mean_X_OX"][s])
+            #logger.debug("p_mean_X_OXY: %s", bilan[k]["p_mean_X_OXY"][s])
             #logger.debug("p_mean_OX_OXY: %s p_max_OX_OXY:%s", bilan[k]["p_mean_OX_OXY"][s], bilan[k]["p_max_OX_OXY"][s])
     # Calcul (VP, FP, FN, VN)
     res = []
@@ -477,7 +481,9 @@ def outdiff_new(tr,name,repseq,reptree,repest,c1,c2):
   ali = AlignIO.read(fasta_file, "fasta")
 
   ##### Tree
-  l_branch_with_transition = tr.search_nodes(T=True)
+  tr = Tree("%s/annotated_tree.nhx" %(reptree))
+  l_branch_with_transition = tr.search_nodes(T="True")
+
 
   #### output per site nb of clades with ...
 
@@ -770,7 +776,7 @@ def dico_typechg_topo(C1, C2, N, repest, name_AC, tree = "", set_t1 = [], n_site
 
             #logger.debug("mean_X: %s max_X:%s", bilan[k]["mean_X"][s], bilan[k]["max_X"][s])
             #logger.debug("mean_CX: %s max_CX:%s", bilan[k]["mean_CX"][s], bilan[k]["max_CX"][s])
-            logger.debug("p_mean_X_CX: %s p_max_X_CX:%s", bilan[k]["p_mean_X_CX"][s], bilan[k]["p_max_X_CX"][s])
+            #logger.debug("p_mean_X_CX: %s p_max_X_CX:%s", bilan[k]["p_mean_X_CX"][s], bilan[k]["p_max_X_CX"][s])
 
     # Calcul (VP, FP, FN, VN)
     res = []
