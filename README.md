@@ -241,7 +241,6 @@ Options:
                         library must be present in the $PATH and in the
                         LD_LIBRARY_PATH
   --debug               debug mode
-
 ```
 
 ## pcoc_det.py usage:
@@ -250,8 +249,9 @@ Options:
 usage: pcoc_det.py [-h] [--version] -t TREE -aa ALI -m "x/y,z/..." -o
                    OUTPUT_DIR [-CATX_est {10,60}] [-f FILTER_T]
                    [-f_pcoc FILTER_T_PCOC] [-f_pc FILTER_T_PC]
-                   [-f_oc FILTER_T_OC] [--plot] [-ph PH] [--reorder]
-                   [--plot_complete_ali] [--no_cleanup_fasta] [--no_cleanup]
+                   [-f_oc FILTER_T_OC] [--plot] [-ph PH] [--reorder] [--gamma]
+                   [--max_gap_allowed MAX_GAP_ALLOWED] [--plot_complete_ali]
+                   [--no_cleanup_fasta] [--no_cleanup]
                    [-LD_LIB LD_LIBRARY_PATH] [--debug]
 
 optional arguments:
@@ -293,6 +293,9 @@ Options:
                         highlight them with a star in the plot
   --reorder             reorder the filtered plot by score.categories (>=
                         0.99, >=0.9, >= 0.8, < 0.8)
+  --gamma               Use rate_distribution=Gamma(n=4) instead of Constant()
+  --max_gap_allowed MAX_GAP_ALLOWED
+                        max_gap_allowed, must be between 0 and 100
   --plot_complete_ali   Plot the tree and which site of alignment with its
                         corresponding score. (Can take time to be open)
   --no_cleanup_fasta    Do not cleanup the fasta directory after the run.

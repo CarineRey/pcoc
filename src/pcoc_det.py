@@ -97,6 +97,12 @@ Options.add_argument('-ph', type=str,
 Options.add_argument('--reorder', action="store_true",
                     help="reorder the filtered plot by score.categories (>= 0.99, >=0.9, >= 0.8, < 0.8)",
                     default=False)
+Options.add_argument('--gamma', action="store_true",
+                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
+                    default=False)
+Options.add_argument('--max_gap_allowed', type=int,
+                    help="max gap allowed to take into account a site (in %), must be between 0 and 100",
+                    default=90)
 Options.add_argument('--plot_complete_ali', action="store_true",
                     help="Plot the tree and which site of alignment with its corresponding score. (Can take time to be open)",
                     default=False)
@@ -255,6 +261,12 @@ metadata_run_dico["Alignment"] = os.path.basename(ali_filename)
 metadata_run_dico["Position_to_highlight"] = positions_to_highlight
 metadata_run_dico["Convergent_branches"] = p_events
 
+metadata_run_dico["gamma"] = args.gamma
+metadata_run_dico["max_gap_allowed"] = args.max_gap_allowed
+
+if not (0 <= args.max_gap_allowed <= 100):
+    logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
+    sys.error(1)
 
 p_filter_threshold = args.filter_t
 
@@ -262,14 +274,14 @@ dict_p_filter_threshold = {}
 dict_p_filter_threshold["PCOC"] = p_filter_threshold
 dict_p_filter_threshold["PC"] = p_filter_threshold
 dict_p_filter_threshold["OC"] = p_filter_threshold
-    
+
 if args.filter_t_pcoc >= 0:
     dict_p_filter_threshold["PCOC"] = args.filter_t_pcoc
 if args.filter_t_pc >= 0:
     dict_p_filter_threshold["PC"] = args.filter_t_pc
 if args.filter_t_oc >= 0:
     dict_p_filter_threshold["OC"] = args.filter_t_oc
-    
+
 
 metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC"]
 metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
@@ -388,8 +400,8 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         logger.debug ("Estime e1: %s e2: %s", e1, e2)
         tree_fn = reptree + "/tree.nhx"
         # Positif
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="")
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="")
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma)
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma)
 
 
     ### post proba
@@ -417,13 +429,13 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             dict_pos_filtered[model].extend(positions_to_highlight)
             dict_pos_filtered[model] = list(set(dict_pos_filtered[model]))
             dict_pos_filtered[model].sort()
-    
+
     # filter dict_values_pcoc
     dict_values_pcoc_filtered = {}
     all_filtered_position = list(set(events_placing.unlist(dict_pos_filtered.values())))
     all_filtered_position.sort()
     dict_pos_filtered["union"] = all_filtered_position
-    
+
     if args.reorder:
         for model in ["PCOC", "PC", "OC", "union"]:
             m_list = [model]
@@ -460,7 +472,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                     j+=1
             dict_pos_filtered[model] = reorder_l(dict_pos_filtered[model], new_order)
 
-    
+
     # filtered ali:
     ## Per model
     for model in ["PCOC", "PC", "OC", "union"]:
@@ -483,7 +495,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     #### filtered:
     df_bilan_f = df_bilan[df_bilan.pos.isin(all_filtered_position)]
     df_bilan_f = df_bilan_f.copy()
-    
+
     df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
     df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
 
