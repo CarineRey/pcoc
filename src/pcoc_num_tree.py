@@ -81,7 +81,7 @@ nstyle_L = NodeStyle()
 nstyle_L["fgcolor"] = "black"
 nstyle_L["size"] = 0
 
-if not os.path.is_file(args.tree):
+if not os.path.isfile(args.tree):
     print ("%s does not exist" %args.tree)
     sys.err(1)
     
