@@ -408,7 +408,7 @@ def noise_bl(tree, reptree, vnodes=None, topo_met=False):
     noisy_tree =tree.copy(method="deepcopy")
     
     for n in noisy_tree.traverse("postorder"):
-        random_err = np.random.exponential(1)
+        random_err = np.random.gamma(10,10)
         n.dist = n.dist * random_err
     
     if not topo_met:
