@@ -498,7 +498,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     repplottreeali=repplottreeali.replace("//","/")
     replikelihoodsummary="%s/%s"%(replikelihoodsummary0,name0)
     replikelihoodsummary=replikelihoodsummary.replace("//","/")
-    
+
     if not os.path.exists(repseq) and not os.path.exists(repest) \
        and not os.path.exists(reptree) and not os.path.exists(repplottreeali):
         os.mkdir(repseq)
@@ -554,10 +554,10 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
         else:
             tree_fn_estim = reptree + "/tree.nhx"
             treeconv_fn_estim = reptree + "/tree_conv.nhx"
-        
+
         logger.debug("Tree estim : %s", tree_fn_estim)
         logger.debug("Tree_conv estim: %s", treeconv_fn_estim)
-        
+
         ### on simule des sequences
         if c1!=c2:
             # Positif
@@ -603,7 +603,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                 bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
                 # Negatif
                 bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
-            
+
             if args.topo or args.pcoc:
                 ### estimations C1C2 et C1C1 ave E1: 1->10 et E2: 1-> 10
 
@@ -647,7 +647,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                     ### Calcul VP FP FN VN Model het
                     res, bilan = estim_data.dico_typechg_new(c1,c2,n_events,repest,nameAC,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
                     l_TPFPFNTN_mod_het.extend(res)
-                    
+
                     for k in [11,12]:
                         dict_benchmark[k]["PCOC"] = bilan[k]["p_mean_X_OXY"]
                         dict_benchmark[k]["PC"] = bilan[k]["p_mean_X_XY"]
@@ -674,10 +674,10 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                 ### Calcul VP FP FN VN obs sub
                 res_sub, bilan_sub = estim_data.dico_typechg_obs_sub(c1,c2,n_events,repest,nameAC,tree = os.path.basename(tree_filename), n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
                 l_TPFPFNTN_obs_sub.extend(res_sub)
-                
+
                 for k in [11,12]:
                     dict_benchmark[k]["Identical"] = bilan_sub[k]["p_ident"]
-                        
+
             if args.topo:
 
                 nodes = [n.ND for n in tree_conv_annotated.traverse() if not n.is_root()]
@@ -701,10 +701,10 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
 
                 res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2,n_events,repest,nameAC, set_t1=set_t1, tree=os.path.basename(tree_filename), n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
                 l_TPFPFNTN_topo.extend(res_topo)
-                
+
                 for k in [11,12]:
                     dict_benchmark[k]["Topological"] = bilan_topo[k]["p_mean_X_CX"]
-                
+
                 if args.get_likelihood_summaries:
                     for k in [11,12]:
                         if k == 11:
@@ -714,7 +714,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                         df_bilan_topo = pd.DataFrame.from_dict(bilan_topo[k], orient='columns', dtype=None)
                         df_bilan_topo["pos"] = df_bilan_topo["pos"] + 1
                         df_bilan_topo.to_csv(replikelihoodsummary + '/likelihood_summary_A%s_C%s.topo.tsv' %(c1,c2_k), index=False, sep='\t')
-        
+
         if args.plot_ali and dict_benchmark != {11:{}, 12:{}}:
             Out_11 = "%s/tree_ali_%s_%s_negative_sites.pdf"%(repplottreeali, c1, c1)
             Out_12 = "%s/tree_ali_%s_%s_positive_sites.pdf"%(repplottreeali, c1, c2)
@@ -804,15 +804,15 @@ for tree_filename in lnf:
     if args.ident:
         metada_simu_sub = pd.DataFrame(metada_simu_per_couple_sub)
         #metada_simu.to_csv(OutDirNamePrefixTree + "/Scenarios_metadata_per_couple_obs_sub.tsv", sep='\t', index=False)
-    
+
     df_concat = [df for df in [metada_simu_het, metada_simu_topo, metada_simu_sub] if not df.empty]
     if df_concat:
         df_cat = pd.concat(df_concat)
         df_cat.to_csv(OutDirNamePrefixTree + "/BenchmarkResults.tsv", sep='\t', index=False)
-    
+
     if args.plot_event_repartition:
         plot_data.mk_bilan_tree(events_placing.init_tree(tree_filename), bilan_nodesWithTransitions, OutDirNamePrefixTree + "/Tree_"+str(num_tree)+".pdf")
-    
+
         #script_dirname = os.path.dirname(os.path.abspath(__file__))
         #R_command="Rscript %s/rscripts/mk_sens_spe_MCC_plot.R %s %s" %(script_dirname, os.environ['PWD'] + "/" + OutDirNamePrefixTree, os.environ['PWD'] + "/" +OutDirNamePrefixTree)
         #logger.info(R_command)

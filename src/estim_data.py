@@ -29,7 +29,6 @@ logger = logging.getLogger("pcoc.estim_data")
 
 DEV = False
 
-
 def read_info(nf, n_sites):
     f=open(nf, "r")
     ll=[]
@@ -303,7 +302,8 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             #logger.debug("mean_XY: %s", bilan[k]["mean_XY"][s])
             #logger.debug("mean_OXY: %s", bilan[k]["mean_OXY"][s])
             #logger.debug("mean_OX: %s", bilan[k]["mean_OX"][s])
-            logger.debug("k: %s, mean_X: %s, mean_XY: %s, p_mean_X_XY: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_XY"][s], bilan[k]["p_mean_X_XY"][s])
+            #logger.debug("k: %s, mean_X: %s, mean_XY: %s, p_mean_X_XY: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_XY"][s], bilan[k]["p_mean_X_XY"][s])
+            #logger.debug("k: %s, mean_X: %s, mean_OX: %s, p_mean_X_OX: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_OX"][s], bilan[k]["p_mean_X_OX"][s])
             #logger.debug("p_mean_X_XY: %s", bilan[k]["p_mean_X_XY"][s])
             #logger.debug("p_mean_X_OX: %s", bilan[k]["p_mean_X_OX"][s])
             #logger.debug("p_mean_X_OXY: %s", bilan[k]["p_mean_X_OXY"][s])

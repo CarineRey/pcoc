@@ -1,23 +1,23 @@
 #  events_placing.py
-#  
+#
 #  Copyright 2017 Carine Rey <carine.rey@ens-lyon.fr>
-#  
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
-#  
-#  
+#
+#
 
 import random
 import numpy as np
@@ -26,8 +26,7 @@ import itertools
 
 
 import logging
-logger = logging.getLogger("simul_CAT_rand.placing")
-
+logger = logging.getLogger("pcoc.events_placing")
 
 # Basic tree style
 tree_style = TreeStyle()
@@ -134,7 +133,7 @@ def build_conv_topo(annotated_tree, vnodes):
       for node in tconv.traverse("postorder"):
           node.ND = nodeId
           nodeId += 1
-      
+
       return tconv
 
 def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWithTransitions, flg = 1, bl_new = -1, topo_met = False, plot = False, cz_nodes = {}):
@@ -210,7 +209,7 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
       tconv = None
   else:
       tconv = build_conv_topo(annotated_tree, nodesWithConvergentModel+nodesWithTransitions)
-      
+
       if cz_nodes:
           tconv.write(format=1, features=["ND","T","C","Cz"],outfile="%s/annotated_tree_conv.nhx"%(reptree),format_root_node=True)
       else:
