@@ -40,6 +40,7 @@ import plot_data
 import multiprocessing
 
 import pandas as pd
+import numpy as np
 from ete3 import Tree
 
 import shutil
@@ -515,16 +516,26 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     logger.debug("repseq: %s", repseq)
     logger.debug("repest: %s", repest)
     logger.debug("reptree: %s", repest)
-    
+
     if args.bl_noise:
         logger.info("%s - Addition of noise in the branch lengths: Yes", name0_info)
         metadata_simu_dico["BLNoise"] = "Yes"
-        events_placing.noise_bl(annotated_tree, reptree, vnodes=nodesWithConvergentModel+nodesWithTransitions, topo_met=args.topo)
+        (node_ID, bl_before, bl_err, bl_after) = events_placing.noise_bl(annotated_tree, reptree, vnodes=nodesWithConvergentModel+nodesWithTransitions, topo_met=args.topo)
+        #logger.debug("node_ID: %s\nbl_before: %s\nbl_err: %s\nbl_after: %s",node_ID, bl_before, bl_err, bl_after)
+        median_err = np.median(bl_err)
+        sd_err = np.std(bl_err)
+        mean_err = np.mean(bl_err)
+        metadata_simu_dico["Mean_Bl_err"] = mean_err
+        metadata_simu_dico["Sd_Bl_err"] = sd_err
+        metadata_simu_dico["Median_Bl_err"] = median_err
+        logger.info("Median bl err: %s", median_err)
+        logger.info("Sd bl err: %s", median_err)
+        logger.info("Mean bl err: %s", mean_err)
     else:
         logger.info("%s - Addition of noise in the branch lengths: No", name0_info)
         metadata_simu_dico["BLNoise"] = "No"
-    
-    
+
+
     ### construit les arbres d'etude :
     (tree_annotated, tree_conv_annotated,  allbranchlength, convbranchlength) = events_placing.mk_tree_4_simu_new(annotated_tree,reptree,nodesWithConvergentModel,nodesWithTransitions, flg = flg, bl_new = bl_new, topo_met=True, plot=args.plot_ali, cz_nodes=cz_nodes)
 

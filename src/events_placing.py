@@ -405,18 +405,28 @@ def noise_tree(tree_ini, NbCat = 10):
 
 def noise_bl(tree, reptree, vnodes=None, topo_met=False):
     noisy_tree =tree.copy(method="deepcopy")
-    
+
+    node_ID = []
+    bl_before = []
+    bl_err = []
+    bl_after = []
+
     for n in noisy_tree.traverse("postorder"):
-        random_err = np.random.gamma(10,10)
+        node_ID.append(n.ND)
+        bl_before.append(n.dist)
+        random_err = np.random.gamma(10,0.1)
+        bl_err.append(random_err)
         n.dist = n.dist * random_err
-    
+        bl_after.append(n.dist)
+
     if not topo_met:
         tconv = None
     else:
         noisy_tconv = build_conv_topo(noisy_tree, vnodes)
         noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
-    
+
     noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
+    return (node_ID, bl_before, bl_err, bl_after)
 
 def placeNTransitionsInTree_new(numTransitions, maxTransitions, maxConvRate, tree_ini, manual_mode_nodes = {}, nf=""):
 
