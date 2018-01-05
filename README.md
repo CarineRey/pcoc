@@ -6,19 +6,19 @@
 
 The pcoc-toolkit is composed of 3 tools:
 
-* pcoc_sim.py: [(usage)](#pcoc_sim.py-usage)
+* pcoc_sim.py: [(usage)](#pcoc_simpy-usage)
 
 simulates an alignment and a scenario of convergent evolution according to the PCOC model for each tree of a directory.
 
 
-* pcoc_det.py: [(usage)](#pcoc_det.py-usage)
+* pcoc_det.py: [(usage)](#pcoc_detpy-usage)
 
 detects sites of an alignment under convergent evolution according to the PCOC model.
 It requires an input alignment, an input tree and the number of nodes where the convergent transitions occurred.
 
 
 
-* pcoc_num_tree.py: [(usage)](#pcoc_num_tree.py-usage)
+* pcoc_num_tree.py: [(usage)](#pcoc_num_treepy-usage)
 
 allows a user to number the nodes of an input tree so as to set the nodes where convergent transitions occurred in pcoc_sim.py and pcoc_det.py
 
@@ -145,9 +145,9 @@ You will find:
 
 # Options by tool:
 
-* [pcoc_sim.py usage](#pcoc_sim.py-usage)
-* [pcoc_det.py usage](#pcoc_det.py-usage)
-* [pcoc_num_tree.py usage](#pcoc_num_tree.py-usage)
+* [pcoc_sim.py usage](#pcoc_simpy-usage)
+* [pcoc_det.py usage](#pcoc_detpy-usage)
+* [pcoc_num_tree.py usage](#pcoc_num_treepy-usage)
 
 
 ## pcoc_sim.py usage:
