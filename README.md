@@ -1,6 +1,6 @@
 # PCOC-TOOLKIT
 
-[logo](etc/PCOC_logo.pdf)
+[[etc/PCOC_logo.pdf || logo]]
 
 # Tools:
 
