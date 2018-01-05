@@ -1,5 +1,7 @@
 # PCOC-TOOLKIT
 
+[logo](etc/PCOC_logo.pdf)
+
 # Tools:
 
 The pcoc-toolkit is composed of 3 tools:
