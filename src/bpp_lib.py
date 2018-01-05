@@ -136,7 +136,7 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
 def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
                nodesWithConvergentModel, c1, c2, repseq, tree_fn,
                repest, repbppconfig, NBCATest=10, suffix="",
-               OneChange=True, ext = ".fa", gamma = False, max_gap_allowed=90):
+               OneChange=True, ext = ".fa", gamma = False, max_gap_allowed=90,inv_gamma=False):
 
     fasta_file = "%s/%s%s" %(repseq, name, ext)
     #logger.debug("fasta_file: %s",fasta_file )
@@ -173,6 +173,8 @@ def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
 
     if gamma:
         command+=" rate_distribution=\"Gamma(n=4)\" "
+    elif inv_gamma:
+        command+=" rate_distribution=\"Invariant(dist=Gamma(n=4))\" "
     else:
         command+=" rate_distribution=\"Constant()\" "
 

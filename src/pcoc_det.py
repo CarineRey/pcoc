@@ -100,6 +100,9 @@ Options.add_argument('--reorder', action="store_true",
 Options.add_argument('--gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
+Options.add_argument('--inv_gamma', action="store_true",
+                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
+                    default=False)
 Options.add_argument('--max_gap_allowed', type=int,
                     help="max gap allowed to take into account a site (in %), must be between 0 and 100",
                     default=90)
@@ -262,6 +265,7 @@ metadata_run_dico["Position_to_highlight"] = positions_to_highlight
 metadata_run_dico["Convergent_branches"] = p_events
 
 metadata_run_dico["gamma"] = args.gamma
+metadata_run_dico["inv_gamma"] = args.inv_gamma
 metadata_run_dico["max_gap_allowed"] = args.max_gap_allowed
 
 if not (0 <= args.max_gap_allowed <= 100):
@@ -400,8 +404,8 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         logger.debug ("Estime e1: %s e2: %s", e1, e2)
         tree_fn = reptree + "/tree.nhx"
         # Positif
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma)
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma)
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
 
 
     ### post proba
