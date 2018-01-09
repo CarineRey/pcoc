@@ -150,7 +150,7 @@ Options_ben.add_argument('--plot_event_repartition', action="store_true",
                     help="Plot chosen random convergent events repartition for each input tree.",
                     default=False)
 #Options_ben.add_argument('--plot', action="store_true",
-#                    help="Plot sensibility and specificity of each appraoch for each input tree.",
+#                    help="Plot sensitivity and specificity of each appraoch for each input tree.",
 #                    default=False)
 ##############
 

@@ -334,7 +334,7 @@ def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1
             if ID:
                 tab["RunID"] = ID
             
-            tab["Sensibility"], tab["Specificity"], tab["MCC"] = sensspec(tab)
+            tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
     
     return res, bilan
@@ -646,7 +646,7 @@ def dico_typechg_obs_sub(C1,C2,N,repest,name_AC,tree="", n_sites = 1000,  ID= ""
             if ID:
                 tab["RunID"] = ID
             
-            tab["Sensibility"], tab["Specificity"], tab["MCC"] = sensspec(tab)
+            tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
             
     return res, bilan
@@ -803,7 +803,7 @@ def dico_typechg_topo(C1, C2, N, repest, name_AC, tree = "", set_t1 = [], n_site
             if ID:
                 tab["RunID"] = ID
             
-            tab["Sensibility"], tab["Specificity"], tab["MCC"] = sensspec(tab)
+            tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
     
     return res, bilan
