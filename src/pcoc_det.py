@@ -104,8 +104,8 @@ Options.add_argument('--inv_gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
 Options.add_argument('--max_gap_allowed', type=int,
-                    help="max gap allowed to take into account a site (in %), must be between 0 and 100",
-                    default=90)
+                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100",
+                    default=30)
 Options.add_argument('--plot_complete_ali', action="store_true",
                     help="Plot the tree and which site of alignment with its corresponding score. (Can take time to be open)",
                     default=False)
@@ -120,10 +120,6 @@ Options.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
 Options.add_argument('--debug', action="store_true",
                     help="debug mode",
                     default=False)
-
-
-
-
 
 ### Option parsing
 args = parser.parse_args()
