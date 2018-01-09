@@ -21,6 +21,7 @@
 #
 
 import os
+import sys
 import argparse
 import time
 from ete3 import Tree, NodeStyle, TreeStyle, TextFace
@@ -83,8 +84,7 @@ nstyle_L["size"] = 0
 
 if not os.path.isfile(args.tree):
     print ("%s does not exist" %args.tree)
-    sys.err(1)
-    
+    sys.exit(1)
 
 tree = init_tree(args.tree)
 
