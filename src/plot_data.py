@@ -157,10 +157,10 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
                 qpen.setWidth(1)
                 qpen.setStyle(5) # dash line : http://doc.qt.io/qt-4.8/qt.html#PenStyle-enum
                 rect_red.setPen(qpen)
-                rect_red.setBrush(QColor("#FFA4A4"))
+                rect_red.setBrush(QColor("#FFD1D1"))
                 rect_red.setZValue(-1)
                 rect_red.setParentItem(self.item)
-                rect_red.setOpacity(0.5)
+                #rect_red.setOpacity(0.5)
 
             if num_col_orange:
                 rect_orange = QGraphicsRectItem(self.col_w * num_col_red + 1 , self.coordY(self.ylim[1])- 5, self.col_w * num_col_orange - 2 , colored_box_h)
@@ -168,10 +168,10 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
                 qpen.setWidth(1)
                 qpen.setStyle(5) # dash line : http://doc.qt.io/qt-4.8/qt.html#PenStyle-enum
                 rect_orange.setPen(qpen)
-                rect_orange.setBrush(QColor("#FFC862"))
+                rect_orange.setBrush(QColor("#FFE3B0"))
                 rect_orange.setZValue(-1)
                 rect_orange.setParentItem(self.item)
-                rect_orange.setOpacity(0.5)
+                #rect_orange.setOpacity(0.5)
 
             if num_col_yellow:
                 rect_yellow = QGraphicsRectItem(self.col_w * (num_col_orange + num_col_red) + 1 , self.coordY(self.ylim[1])- 5, self.col_w * num_col_yellow - 2 , colored_box_h)
@@ -182,7 +182,7 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
                 rect_yellow.setBrush(QColor("#FBFFA5"))
                 rect_yellow.setZValue(-1)
                 rect_yellow.setParentItem(self.item)
-                rect_yellow.setOpacity(0.5)
+                #rect_yellow.setOpacity(0.5)
 
             if num_col_gray:
                 rect_gray = QGraphicsRectItem(self.col_w * (num_col_orange + num_col_red + num_col_yellow)  + 1 , self.coordY(self.ylim[1])- 5, self.col_w * num_col_gray, colored_box_h)
@@ -190,10 +190,10 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
                 qpen.setWidth(1)
                 qpen.setStyle(5) # dash line : http://doc.qt.io/qt-4.8/qt.html#PenStyle-enum
                 rect_gray.setPen(qpen)
-                rect_gray.setBrush(QColor("#E3E3E3"))
+                rect_gray.setBrush(QColor("#E2E2E2"))
                 rect_gray.setZValue(-1)
                 rect_gray.setParentItem(self.item)
-                rect_gray.setOpacity(0.5)
+                #rect_gray.setOpacity(0.5)
 
     def update_items(self):
             self.item =  QGraphicsRectItem(-30, 0, self.width+40, self.height+70)

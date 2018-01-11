@@ -91,6 +91,9 @@ Options.add_argument('-f_oc', '--filter_t_oc',type=float,
 Options.add_argument('--plot', action="store_true",
                     help="Plot the tree and the filtered sites of the alignment with their corresponding score.",
                     default=False)
+Options.add_argument('--svg', action="store_true",
+                    help="additional svg output plots.",
+                    default=False)
 Options.add_argument('-ph', type=str,
                     help="Add these positions in the filtered position and highlight them with a star in the plot",
                     default=False)
@@ -503,6 +506,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     if args.plot:
         if args.plot_complete_ali:
             plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete_ali.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+            if args.svg:
+                plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete_ali.svg", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+
 
         for model in ["PCOC", "PC", "OC"]:
             if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
@@ -510,6 +516,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 for (key, val) in dict_values_pcoc.items():
                     dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
                 plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".pdf", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+                if args.svg:
+                     plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".svg", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+
         # all model
         if dict_pos_filtered["union"]:
             model = "union"
@@ -517,6 +526,8 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             for (key, val) in dict_values_pcoc.items():
                 dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
             plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".pdf", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
+            if args.svg:
+                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".svg", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
 
 
     if not args.no_cleanup:
