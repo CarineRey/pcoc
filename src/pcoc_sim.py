@@ -81,8 +81,8 @@ Options_trees.add_argument('-m', '--manual_mode', metavar="\"x/y,z/...\"", type=
                     help="User defined convergent transition/branches. Transition node must be the first number and independent events must be separed by a \"/\". ex: \"1,2,3/67/55,56\" (default: None)",
                     default="")
 Options_trees.add_argument('-c_max', type=int, metavar="INT",
-                    help="Maximum number of potential convergent transitions (=convergent events). First, this number of events are draw up in the tree, then the wanted number of event is randomly chosen among them. It is to avoid any bias when you want to compared 2 and 7 events. (default: 8)",
-                    default=8)
+                    help="Maximum number of potential convergent transitions (=convergent events). First, this number of events are draw up in the tree, then the wanted number of event is randomly chosen among them. It is to avoid any bias when you want to compared 2 and 7 events. (default: 7)",
+                    default=7)
 Options_trees.add_argument('-c', type=int, metavar="INT",
                     help="Number of convergent transitions (=convergent events). If not defined, random between min events and max events",
                     default=0)
