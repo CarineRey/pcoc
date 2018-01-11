@@ -56,39 +56,37 @@ start_time = time.time()
 parser = argparse.ArgumentParser(prog="pcoc_sim.py",
                                  description='')
 parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
-parser._optionals.title = "MISCELLANEOUS"
-
-#defaut
+parser._optionals.title = "Miscellaneous options"
 parser.add_argument('-cpu', type=int,
                     help="Number of cpu to use. (default: 1)",
                     default=1)
 
 ##############
-requiredOptions = parser.add_argument_group('REQUIRED OPTIONS')
+requiredOptions = parser.add_argument_group('Required options')
 requiredOptions.add_argument('-td', "--tree_dir", type=str,
                              help='Directory name containing input trees.', required=True)
 requiredOptions.add_argument('-o', '--output_dir', type=str,
-                   help="Output directory name. (Default output)", required=True)
+                   help="Output directory name.", required=True)
 ##############
 
 
 ##############
 Options_trees = parser.add_argument_group('Convergent scenarios simulation options')
 Options_trees.add_argument('-n_sc', type=int,  metavar="INT",
-                    help="Number of convergent scenarios draw up from each input tree. (default: 1)",
+                    help="Number of convergent scenarios picked in each input tree. (default: 1)",
                     default=1)
 Options_trees.add_argument('-m', '--manual_mode', metavar="\"x/y,z/...\"", type=str,
                     help="User defined convergent transition/branches. Transition node must be the first number and independent events must be separed by a \"/\". ex: \"1,2,3/67/55,56\" (default: None)",
                     default="")
 Options_trees.add_argument('-c_max', type=int, metavar="INT",
-                    help="Maximum number of potential convergent transitions (=convergent events). First, this number of events are draw up in the tree, then the wanted number of event is randomly chosen among them. It is to avoid any bias when you want to compared 2 and 7 events. (default: 7)",
+                    help="Maximum number of potential convergent transitions (=convergent events). (default: 7)", # First, this number of events are drawn up in the tree, then the wanted number of event is randomly chosen among them. It is to avoid any bias when you want to compared 2 and 7 events. (default: 7)",
                     default=7)
-Options_trees.add_argument('-c', type=int, metavar="INT",
-                    help="Number of convergent transitions (=convergent events). If not defined, random between min events and max events",
-                    default=0)
 Options_trees.add_argument('-c_min', type=int, metavar="INT",
                     help="Minimum number of transition (=convergent events). (default: 2)",
                     default=2)
+Options_trees.add_argument('-c', type=int, metavar="INT",
+                    help="Number of convergent transitions (=convergent events). If not defined, random between min events and max events",
+                    default=0)
 Options_trees.add_argument('-cr', type=float, metavar="FLOAT",
                     help="Maximum ratio between the number of convergent/non convergent leaves. (default: No limits)",
                     default=1)
@@ -109,10 +107,10 @@ Options_trees.add_argument('--bl_noise', action="store_true",
 
 ##############
 Options_ali = parser.add_argument_group('Alignment simulation options')
-Options_ali.add_argument('-nb_sampled_couple', type=int,
+Options_ali.add_argument('-nb_sampled_couple', type=int,  metavar="INT",
                     help="For each convergent scenario, number of simulated alignment with different sampled couple of profiles (Ancestral/Convergent). (default: 1)",
                     default=1)
-Options_ali.add_argument('-n_sites', type=int,
+Options_ali.add_argument('-n_sites', type=int,  metavar="INT",
                     help="Number of simulated sites per alignment. (default: 100)",
                     default=100)
 Options_ali.add_argument('-CATX_sim', type=int, choices = [10,60],
@@ -134,19 +132,19 @@ Options_ali.add_argument('--no_clean_seqs', action="store_true",
 
 
 ##############
-Options_ben = parser.add_argument_group('Benchmark options')
+Options_ben = parser.add_argument_group('Detection options')
+Options_ben.add_argument('--pcoc', action="store_true",
+                    help="Use the PCOC model approach to detect sites under convergent evolution.",
+                    default=False)
+Options_ben.add_argument('--ident', action="store_true",
+                    help="Use the ancestral reconstruction approach to detect sites under convergent evolution.",
+                    default=False)
+Options_ben.add_argument('--topo', action="store_true",
+                    help="Use the topological approach to detect sites under convergent evolution.",
+                    default=False)
 Options_ben.add_argument('-CATX_est', type=int, choices = [10,60],
                     help="Profile categories to estimate data (10->C10 or 60->C60). (default: 10)",
                     default=10)
-Options_ben.add_argument('--pcoc', action="store_true",
-                    help="Use the PCOC model approach to detect site under convergent evolution.",
-                    default=False)
-Options_ben.add_argument('--ident', action="store_true",
-                    help="Use the ancestral reconstruction approach to detect site under convergent evolution.",
-                    default=False)
-Options_ben.add_argument('--topo', action="store_true",
-                    help="Use the topological approach to detect site under convergent evolution.",
-                    default=False)
 Options_ben.add_argument('--plot_event_repartition', action="store_true",
                     help="Plot chosen random convergent events repartition for each input tree.",
                     default=False)
@@ -157,14 +155,14 @@ Options_ben.add_argument('--plot_event_repartition', action="store_true",
 
 
 ##############
-Options_other = parser.add_argument_group('Options')
+Options_other = parser.add_argument_group('Other Options')
 #Options_other.add_argument('-log', type=str, default="",
 #                  help="a log filename to report avancement (default: no)")
 Options_other.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
                     default=False)
 Options_other.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
-                   help="Redefine the LD_LIBRARY_PATH env variable, bppsuite library must be present in the $PATH and in the LD_LIBRARY_PATH")
+                   help="Redefine the LD_LIBRARY_PATH env variable, bppsuite library must be present in the $PATH and in the $LD_LIBRARY_PATH")
 Options_other.add_argument('--debug', action="store_true",
                     help="debug mode", default=False)
 
@@ -362,7 +360,7 @@ metadata_run_dico["Run PCOC method"] = pcoc_str
 metadata_run_dico["Run topological method"] = topo_str
 metadata_run_dico["Run identical method"] = ident_str
 
-pd.Series(metadata_run_dico).to_csv(OutDirName + "/Run_metadata.tsv", sep='\t')
+pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
 
 ### Choose CAT profiles
 
@@ -801,7 +799,7 @@ for tree_filename in lnf:
     metada_simu = pd.DataFrame(metada_simu_global)
     sorted_colums = ["ScenarioID"] + [c for c in metada_simu.columns if c != "ScenarioID"]
     metada_simu = metada_simu.reindex_axis(sorted_colums, axis=1)
-    metada_simu.to_csv(OutDirNamePrefixTree + "/Metadata_Scenarios.tsv", sep='\t', index=False)
+    metada_simu.to_csv(OutDirNamePrefixTree + "/MetadataScenarios.tsv", sep='\t', index=False)
 
 
     metada_simu_het = pd.DataFrame()
@@ -848,7 +846,7 @@ df_tree = pd.DataFrame.from_dict(restructured_metadata_tree_dico)
 ## Reorder columns
 df_tree = df_tree[["Tree_#", "Tree_filename", "Execution time"]]
 
-df_tree.to_csv(OutDirName + "/Tree_metadata.tsv", sep='\t', index=False)
+df_tree.to_csv(OutDirName + "/tree_metadata.tsv", sep='\t', index=False)
 
 if not args.no_cleanup:
     remove_folder(repbppconfig)
