@@ -56,6 +56,7 @@ start_time = time.time()
 parser = argparse.ArgumentParser(prog="pcoc_sim.py",
                                  description='')
 parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+parser._optionals.title = "MISCELLANEOUS"
 
 #defaut
 parser.add_argument('-cpu', type=int,
@@ -63,7 +64,7 @@ parser.add_argument('-cpu', type=int,
                     default=1)
 
 ##############
-requiredOptions = parser.add_argument_group('required arguments')
+requiredOptions = parser.add_argument_group('REQUIRED OPTIONS')
 requiredOptions.add_argument('-td', "--tree_dir", type=str,
                              help='Directory name containing input trees.', required=True)
 requiredOptions.add_argument('-o', '--output_dir', type=str,

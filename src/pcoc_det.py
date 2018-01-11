@@ -53,12 +53,14 @@ start_time = time.time()
 parser = argparse.ArgumentParser(prog="pcoc_det.py",
                                  description='')
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+
+parser._optionals.title = "MISCELLANEOUS"
 #parser.add_argument('-cpu', type=int,
 #                    help="Number of cpu to use. (default: 1)",
 #                    default=1)
 
 ##############
-requiredOptions = parser.add_argument_group('Required arguments')
+requiredOptions = parser.add_argument_group('REQUIRED OPTIONS')
 requiredOptions.add_argument('-t', "--tree", type=str,
                              help='Input tree filename', required=True)
 requiredOptions.add_argument('-aa', "--ali", type=str,
@@ -72,55 +74,61 @@ requiredOptions.add_argument('-o', '--output_dir', type=str,
 
 
 ##############
-Options = parser.add_argument_group('Options')
-Options.add_argument('-CATX_est', type=int, choices = [10,60],
-                    help="Profile categorie to estimate data (10->C10 or 60->C60). (default: 10)",
-                    default=10)
-Options.add_argument('-f', '--filter_t',type=float,
+BasicOptions = parser.add_argument_group('OPTIONS FOR BASIC USAGE')
+
+BasicOptions.add_argument('-f', '--filter_t',type=float,
                     help="ALL model: Posterior probability threshold to put result in \"filtered\" results. (default: 0.99)",
                     default=0.99)
-Options.add_argument('-f_pcoc', '--filter_t_pcoc',type=float,
+BasicOptions.add_argument('-f_pcoc', '--filter_t_pcoc',type=float,
                     help="PCOC model: Posterior probability threshold to put result in \"filtered\" results. If = -1, take the value of -f, if > 1, discard this model. (default: -1)",
                     default=-1)
-Options.add_argument('-f_pc', '--filter_t_pc',type=float,
+BasicOptions.add_argument('-f_pc', '--filter_t_pc',type=float,
                     help="PC model: Posterior probability threshold to put result in \"filtered\" results. If = -1, take the value of -f, if > 1, discard this model.(default: -1)",
                     default=-1)
-Options.add_argument('-f_oc', '--filter_t_oc',type=float,
+BasicOptions.add_argument('-f_oc', '--filter_t_oc',type=float,
                     help="OC model: Posterior probability threshold to put result in \"filtered\" results. If = -1, take the value of -f, if > 1, discard this model.(default: -1)",
                     default=-1)
-Options.add_argument('--plot', action="store_true",
-                    help="Plot the tree and the filtered sites of the alignment with their corresponding score.",
-                    default=False)
-Options.add_argument('--svg', action="store_true",
-                    help="additional svg output plots.",
-                    default=False)
-Options.add_argument('-ph', type=str,
+BasicOptions.add_argument('-ph', type=str,
                     help="Add these positions in the filtered position and highlight them with a star in the plot",
                     default=False)
-Options.add_argument('--reorder', action="store_true",
+BasicOptions.add_argument('--plot', action="store_true",
+                    help="Plot the tree and the filtered sites of the alignment with their corresponding score.",
+                    default=False)
+BasicOptions.add_argument('--plot_complete_ali', action="store_true",
+                    help="Plot the tree and each site of alignment with its corresponding score. (Can take time to be openned)",
+                    default=False)
+BasicOptions.add_argument('--reorder', action="store_true",
                     help="reorder the filtered plot by score.categories (>= 0.99, >=0.9, >= 0.8, < 0.8)",
                     default=False)
-Options.add_argument('--gamma', action="store_true",
-                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
+BasicOptions.add_argument('--svg', action="store_true",
+                    help="additional svg output plots.",
                     default=False)
-Options.add_argument('--inv_gamma', action="store_true",
-                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
-                    default=False)
-Options.add_argument('--max_gap_allowed', type=int,
-                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100",
-                    default=30)
-Options.add_argument('--plot_complete_ali', action="store_true",
-                    help="Plot the tree and which site of alignment with its corresponding score. (Can take time to be open)",
-                    default=False)
-Options.add_argument('--no_cleanup_fasta', action="store_true",
+BasicOptions.add_argument('--no_cleanup_fasta', action="store_true",
                     help="Do not cleanup the fasta directory after the run.",
                     default=False)
-Options.add_argument('--no_cleanup', action="store_true",
+##############
+
+
+##############
+AdvancedOptions = parser.add_argument_group('OPTIONS FOR ADVANCED USAGE')
+AdvancedOptions.add_argument('-CATX_est', type=int, choices = [10,60],
+                    help="Profile categorie to estimate data (10->C10 or 60->C60). (default: 10)",
+                    default=10)
+AdvancedOptions.add_argument('--gamma', action="store_true",
+                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
+                    default=False)
+AdvancedOptions.add_argument('--inv_gamma', action="store_true",
+                    help="Use rate_distribution=Gamma(n=4) instead of Constant()",
+                    default=False)
+AdvancedOptions.add_argument('--max_gap_allowed', type=int,
+                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100",
+                    default=30)
+AdvancedOptions.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
                     default=False)
-Options.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
+AdvancedOptions.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
                    help="Redefine the LD_LIBRARY_PATH env variable, bppsuite library must be present in the $PATH and in the LD_LIBRARY_PATH")
-Options.add_argument('--debug', action="store_true",
+AdvancedOptions.add_argument('--debug', action="store_true",
                     help="debug mode",
                     default=False)
 
@@ -160,22 +168,22 @@ LogFile = OutDirName + "/pcoc_det.log"
 logger = logging.getLogger("pcoc")
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler(LogFile)
+#fh = logging.FileHandler(LogFile)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
 if args.debug:
     ch.setLevel(logging.DEBUG)
-    fh.setLevel(logging.DEBUG)
+#    fh.setLevel(logging.DEBUG)
 else:
     ch.setLevel(logging.INFO)
-    fh.setLevel(logging.INFO)
+#    fh.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter_fh = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 formatter_ch = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter_fh)
+#fh.setFormatter(formatter_fh)
 ch.setFormatter(formatter_ch)
 # add the handlers to the logger
-logger.addHandler(fh)
+#logger.addHandler(fh)
 logger.addHandler(ch)
 
 logger.debug(sys.argv)
@@ -295,7 +303,7 @@ metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
 
-pd.Series(metadata_run_dico).to_csv(OutDirName + "/Run_metadata.tsv", sep='\t')
+pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
 
 def remove_folder(path):
     # check if folder exists
@@ -505,9 +513,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     ### Plot
     if args.plot:
         if args.plot_complete_ali:
-            plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete_ali.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+            plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete_ali.svg", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+                plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
 
 
         for model in ["PCOC", "PC", "OC"]:
@@ -515,9 +523,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 dict_values_pcoc_filtered_model = {}
                 for (key, val) in dict_values_pcoc.items():
                     dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".pdf", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
                 if args.svg:
-                     plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".svg", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+                     plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
 
         # all model
         if dict_pos_filtered["union"]:
@@ -525,9 +533,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             dict_values_pcoc_filtered_model = {}
             for (key, val) in dict_values_pcoc.items():
                 dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-            plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".pdf", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
+            plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_ali_"+model+".svg", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
+                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
 
 
     if not args.no_cleanup:
