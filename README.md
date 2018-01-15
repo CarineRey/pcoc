@@ -17,7 +17,7 @@
 
         * you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
 
-# **Table of contents:**
+## **Table of contents:**
 
    * [I. Using <strong>PCOC</strong> to detect convergence in an empirical dataset](#i-using-pcoc-to-detect-convergence-in-an-empirical-dataset)
       * [1. Prerequisite on input data](#1-prerequisite-on-input-data)
