@@ -1,332 +1,456 @@
-# PCOC-TOOLKIT
+# PCOC
+
+(For full explanation of the pipeline, see the [**PCOC** paper](https://doi.org/10.1101/247296)).
+
+**PCOC** is a convergent substitution detection tool with two main facets:
+
+* [I.  **PCOC** allows users to detect convergence in an empirical dataset (species tree and amino-acid alignment).](#i-using-pcoc-to-detect-convergence-in-an-empirical-dataset)
+     * Conditions to use the **PCOC** *detection* pipeline:
+         * you already have an empirical dataset, *i.e.* (at least) an amino-acid alignment and a corresponding gene tree
+
+
+* [II.  **PCOC** allows users to simulate a dataset and compare the power of methods that detect convergence in it.](https://github.com/CarineRey/pcoc/wiki#ii-using-pcoc-to-simulate-a-dataset-and-compare-convergent-detection-methods-in-it)
+     * Conditions to use the **PCOC** *simulation* pipeline:
+ 
+        * you want to start a project on convergence and you wonder how many samples are necessary to have sufficient power to detect convergent sites. With the **PCOC** *simulation* pipeline, you can simulate if detection of convergence is possible with a dataset of a given size.
+
+        * you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
+
+
+***
+
+**Table of contents:**
+
+   * [I. Using <strong>PCOC</strong> to detect convergence in an empirical dataset](#i-using-pcoc-to-detect-convergence-in-an-empirical-dataset)
+      * [1. Prerequisite on input data](#1-prerequisite-on-input-data)
+      * [2. <strong>PCOC</strong> Installation](#2-pcoc-installation)
+      * [3. Usage](#3-usage)
+         * [A. Prepare tree for detection analysis: set putative convergent leaves/nodes](#a-prepare-tree-for-detection-analysis-set-putative-convergent-leavesnodes)
+         * [B. Run detection analysis](#b-run-detection-analysis)
+      * [4. Output files](#4-output-files)
+   * [II. Using <strong>PCOC</strong> to simulate a dataset and compare methods for detecting convergent evolution on it](#ii-using-pcoc-to-simulate-a-dataset-and-compare-methods-for-detecting-convergent-evolution-on-it)
+      * [1. Usage](#1-usage)
+         * [A. Define the convergent scenarios](#a-define-the-convergent-scenarios)
+         * [B. Simulate the data according to the convergent scenario](#b-simulate-the-data-according-to-the-convergent-scenario)
+         * [C. Test for convergence in the simulated data using different methods (including <strong>PCOC</strong>)](#c-test-for-convergence-in-the-simulated-data-using-different-methods-including-pcoc)
+      * [2. Output files](#2-output-files)
+      * [3. Some examples taken from the PCOC paper](#3-some-examples-taken-from-the-pcoc-paper)
+
+
+***
+
+# I. Using **PCOC** to detect convergence in an empirical dataset
+
+## 1. Prerequisite on input data
+
+The user needs:
+
+* an amino-acid alignment
+* a gene tree with values for branch lengths (these values are used by the program)
+
+Once you have these data, you can install **PCOC**.
+
+If you don't have your data yet, you can use the dataset from [(Besnard *et al.*, 2009)](https://doi.org/10.1093/molbev/msp103) used in the PCOC paper and courteously provided by the authors:
+
+> Besnard, G., Muasya, A. M., Russier, F., Roalson, E. H., Salamin, N., and Christin, P.-A. 2009. Phylogenomics of C4 Photosynthesis in Sedges (Cyperaceae): Multiple Appearances and Genetic Convergence. Molecular Biology and Evolution, 26(8): 1909–1919, https://doi.org/10.1093/molbev/msp103
+
+```{sh}
+#get the PEPC protein alignment for sedges (plant species at C3/C4 transition), and rename this alignment with shorter name
+wget  https://raw.githubusercontent.com/CarineRey/pcoc/master/data/det/cyp_coding.aa.coor_mays.fa
+mv cyp_coding.aa.coor_mays.fa ali.fa
+
+#get the corresponding tree, rename it and move it to a new folder
+mkdir -p tree_dir
+wget https://raw.githubusercontent.com/CarineRey/pcoc/master/data/det/cyp_coding.phy_phyml_tree.txt -P tree_dir
+mv tree_dir/cyp_coding.phy_phyml_tree.txt tree_dir/tree.nw
+```
+
+**Of note**: the gene tree needs to have the **exact** same labels (same number of labels, same names) as the alignment.
+
+## 2. **PCOC** Installation
+
+PCOC relies on the `Bpp` suite (https://github.com/BioPP/bppsuite) which is in constant development. In order to avoid installation and compilation of the latest version on your machine (this can take a long time), we suggest you to use `Docker`. Of course, you can also use **PCOC** without Docker but `Docker` is the easiest way to use the **PCOC** toolkit locally. `Docker` will create a local environment on your computer that will contain **PCOC** dependencies  (`Bpp` and `python` with some modules (`ete3` and `Biopython`)).They will all be packaged within the **PCOC** `Docker` image. 
+
+If you don't have Docker on your machine, get it [here](https://docs.docker.com/engine/installation/) first. (*Be aware that installation might differ if you're a Linux, a Mac or a Windows user.*)
+
+To download or update the docker image you have to type the following command line:
+    
+```{sh}
+docker pull carinerey/pcoc
+```
+*Note:* Mac users may first need to start Docker using the Docker application (if it's not running in background). If not, you could get the error message `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?`.
+
+Then, to use **PCOC** through a docker container (containing the **PCOC**  image), you have to type:
+
+```{sh}
+# run as user (to have user permission on output files) ##NOT WORKING
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD -e CWD=$PWD carinerey/pcoc [SOME PCOC TOOL] [SOME PCOC OPTIONS]
+```
+
+What does this command line mean?
+
+* `docker run [container options] [image] [cmd]`  is the command to launch a `[cmd]` in a docker container with the specified `[container options]` containing a given `[image]`.
+* `` -e LOCAL_USER_ID=`id -u $USER` ``: allows you to get read and write permissions on the ouput files (if you remove this part of the command line, files will belong to the root user).
+* `-v $PWD:$PWD`: allows sharing the current directory between your computer and the container.
+* `--rm`: allows automaticlly removing the container when the job is finished (this limits disk space usage)
+* `-e CWD=$PWD` : allows specifying the current working directory and use relative path from this directory (here `$PWD`) 
+*  `carinerey/pcoc ` is the name of the docker image hosted on DockerHub
+*  `[SOME PCOC TOOL] [SOME PCOC OPTIONS] ` is the command run in the container (see below)
+
+Below, we will shorten this command line by passing all the Docker options into an environment variable.
+
+```{sh}
+CMD_PCOC_DOCKER="docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD -e CWD=$PWD carinerey/pcoc"
+```
+Thus, to run **PCOC**, simply type: 
+
+```{sh}
+$CMD_PCOC_DOCKER [SOME PCOC TOOL] [SOME PCOC OPTIONS]
+```
+
+## 3. Usage
+
+
+### A. Prepare tree for detection analysis: set putative convergent leaves/nodes
+
+Based on biological relevance of the studied taxon, each user determines manually where the convergent transitions occurred, and which nodes are assumed to be in the convergent phenotypic state. This is done with the help of the `pcoc_num_tree.py` script.
+
+ *Note that PCOC aims to detect sites with convergent substitutions in the case of a given set of transitions but not to identify the set of convergent transitions.*  
+
+#### i. The 1st step is to "number" the tree: each node in the input tree is labeled and given a number. 
+
+
+```{sh}
+$CMD_PCOC_DOCKER pcoc_num_tree.py -t tree_dir/tree.nw -o num_tree.pdf ##takes a few seconds; replace file name of tree.nw with your input tree
+```
+
+#### ii. In the 2nd step, you use the numbered tree (output of the 1st step) to write a string corresponding to the convergent scenario you are interested in.
+
+
+The string looks like `1,2,3/55,56/67`. The syntax is defined as such:
+
+* a clade of nodes corresponding to a same convergent transition is written as a list of node IDs separated by a `,`. **The node ID corresponding to the initial convergent transition must be the first number** (here, `1`, `55` and `67`).
+
+* each independent set of nodes corresponding to independent convergent clades are separated by a `/`.
+
+
+In the example dataset used in the **PCOC** paper, species with the convergent phenotypes are (see the figure in num_tree.pdf for the node IDs):
+
+| 1st convergent clade                                  | 2nd convergent clade          | 3rd convergent clade       | 4th convergent clade        | 5th convergent clade          |
+|--------------------------------------------------------|-----------------------------------|----------------------------------|----------------------------------|----------------------------------|
+| Ele.bald (node 0)                                      | Bulbostyl (38)                    | Fimb.li2 (45)                    | Cyp.capi (78)                    | Rhy.rubr (133)                   |
+| Ele.bal2 (node 1)                                      | all internal nodes in this group  | Fimb.di2 (46)                    | Volkiell (79)                    | Rhy.glob (134)                   |
+| Ele.bal4 (node 3)                                      |                                   | Fimb.fer (47)                    | Cyp.ust2 (80)                    | Rhy.glo2 (135)                   |
+| Ele.vivi (node 5)                                      |                                   | all internal nodes in this group | Remirea  (81)                    | all internal nodes in this group |
+| Ele.vivA (node 6)                                      |                                   |                                  | Cyp.iria (82)                    |                                  |
+| all internal nodes in this group (nodes 2, 4, 7 and 8) |                                   |                                  | Killinga (83)                    |                                  |
+|                                                        |                                   |                                  | Pycreus  (84)                    |                                  |
+|                                                        |                                   |                                  | Cyp.long (86)                    |                                  |
+|                                                        |                                   |                                  | Cyp.rotu (87)                    |                                  |
+|                                                        |                                   |                                  | Cyp.papy (89)                    |                                  |
+|                                                        |                                   |                                  | Cyp.ustu (90)                    |                                  |
+|                                                        |                                   |                                  | all internal nodes in this group |                                  |
+
+so the string corresponding to this scenario is:
+
+`8,0,1,2,3,4,5,6,7/49,45,46,47,48/38/98,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97/137,133,134,135,136`.
+
+(Remember that the common ancestor of each clade with a convergent transition has to be the first in the list.)
+
+#### iii. (Optional) The 3rd step is to visualize the final tree with colored labeled branches (to ascertain that no branch has been forgotten during 2nd step)
+
+
+```{sh}
+# this takes a few seconds
+scenario="8,0,1,2,3,4,5,6,7/49,45,46,47,48/38/98,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97/137,133,134,135,136"
+$CMD_PCOC_DOCKER pcoc_num_tree.py -t tree_dir/tree.nw -o num_tree.pdf -m $scenario 
+```
+
+### B. Run detection analysis 
+
+This is done by the `pcoc_det.py` script. Please see the man page for the full list of options: `$CMD_PCOC_DOCKER pcoc_det.py -h`
+
+#### Minimal usage:
+
+To run the detection tool of the PCOC toolkit, you need the amino-acid alignment of the studied gene, the "species" tree with values for branch lengths, and the string corresponding to the convergent scenario (obtained from the previous section).
+
+With the option `-f`, you can fix the threshold at which a position is retained if its posterior probability is above this threshold for one of the 3 implemented models (PCOC, PC or OC).
+
+```{sh}
+# here we set the threshold to 0.8
+# this takes one minute maximum
+$CMD_PCOC_DOCKER pcoc_det.py -t tree_dir/tree.nw -aa ali.fa -o output_pcoc_det -m $scenario -f 0.8
+```
+
+## 4. Output files
+
+Results are in the folder `output_pcoc_det/RUN_yyyymmdd_hhmmss/` where `yyyymmdd_hhmmss` corresponds to the date and time of the analysis.
+
+You will find:
+
+  * `ali.filtered_results.tsv`: a tabular file with posterior probabilities for each position with a posterior probability above the threshold of one of the PCOC models (PCOC, PC and OC; see -f/-f_pcoc/-f_pc/-f_oc)
+  * `ali.results.tsv`: a tabular file with posterior probabilities for all positions according the **PCOC** models (PCOC, PC and OC)
+  * `Run_metadata.tsv`: a tabular file with metadata about this run
+  * `pcoc_det.log`: a log file
+
+*Of note*: if you want to get the alignment of filtered positions only, add the `--no_cleanup_fasta` option to your command. This will create a directory named `fasta` with these particular positions for each model (PCOC, PC and OC) and the union of them. You will most probably only use the output from the PCOC model, but the PC and OC outputs are also provided.
+
+#### Graphical output options:
+    
+* You can get a graphical output for all positions using  `--plot_complete_ali ` (default is pdf output, add `--svg` for svg output)
+    
+    ```{sh}
+    $CMD_PCOC_DOCKER pcoc_det.py -t tree_dir/tree.nw -aa ali.fa -o output_pcoc_det -m $scenario --plot_complete_ali
+    ```
+    You will additionally find in the output directory `ali_plot_complete.pdf`. This file contains a plot of the tree, the complete alignment and the posterior probability according to PCOC models (only if `--plot_complete_ali` has been used)
+  
+* You can get a graphical output for the filtered positions only using `--plot` and reorder them in function of their posterior probability with `--reorder`
+    
+    ```{sh}
+    $CMD_PCOC_DOCKER pcoc_det.py -t  tree_dir/tree.nw -aa ali.fa -o output_pcoc_det -m $scenario --plot --reorder
+    ```
+
+    You will additionnaly find in the output directory:
+
+    * `ali_plot_filtered_PCOC.pdf`: the same plot as `ali_plot_complete.pdf` but filtered for the positions with a posterior probability according to the PCOC model above `-f` threshold (only if `--plot`)
+    * `ali_plot_filtered_PC.pdf`: the same plot as ali_plot_filtered_PCOC.pdf but for the PC model 
+    * `ali_plot_filtered_OC.pdf`: the same plot as ali_plot_filtered_ali_PCOC.pdf but for the OC model 
+    * `ali_plot_filtered_union.pdf`: the same plot with the union of all positions wit the different models
+
+ * You can also add user defined sites in the output and highlight them
+
+    Based on previous work, you can have a list of candidate sites that are susceptible to be under convergent evolution. If you want to visualize how these sites go through the **PCOC** *detection* pipeline, you can choose to specifically display them in the output with the option `-ph`.
+
+    In the example dataset, this is the case for 16 sites (based on Besnard et al. (2009)).
+
+    ```{sh}
+    candidates="505,540,572,573,623,665,731,733,749,751,761,770,780,810,839,906"
+    ```
+    You can visualize them by typing:
+    
+    ```{sh}
+    $CMD_PCOC_DOCKER pcoc_det.py -t  tree_dir/tree.nw -aa ali.fa -o  output_pcoc_det -m $scenario  -f 0.8 --plot --reorder -ph $candidates
+    ```
+    The sites with a `*` in the image output correspond to the candidate sites (set with `-ph`).
+
+
+
+___
+
+
+# II. Using **PCOC** to simulate a dataset and compare methods for detecting convergent evolution on it
+
+*If you don't have **PCOC** yet, see [the installation procedure in the first section](#2-pcoc-installation)*
+
+**PCOC** allows users to simulate a dataset and compare **PCOC** with other convergence detection tools (using the simulated dataset). This **PCOC** feature can be used in 2 main situations:
+    
+* you want to start a project on convergence and you wonder how many samples are necessary to have enough power to detect convergent sites. With the **PCOC** *simulation* pipeline, you can simulate if detection of convergence is possible with a dataset of a given size
+
+* you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
+
+In both cases, the options will be exactly the same. The only thing that differs between these approaches is the definition of the convergence scenario. 
+
+
+(i) In the first situation, you provide a candidate convergence scenario (relevant to the biology of the studied species). In practice, you have a species tree with given convergent events and you want to test the power of convergent detection tools on this particular topology.
+
+(ii) In the second situation, the convergence scenario will be randomly generated. You have one (or more) species tree(s) and you want to compare the power of **PCOC** with other convergence detection tools under random convergent scenarios on this (these) topologies. 
+
+
+## 1. Usage
+
+The **PCOC** simulation and benchmark part is done by the `pcoc_sim.py` script.
+
+*(see man page for full list of options:* `$CMD_PCOC_DOCKER pcoc_sim.py -h`)
+
+> *If you don't have a species tree yet, you can use the dataset from [Besnard *et al.*, 2009](https://doi.org/10.1093/molbev/msp103) used in the **PCOC** paper and courteously provided by the authors:*
+>```{sh}
+>#get the corresponding tree, rename it and move it to a new folder
+>mkdir -p tree_dir
+>wget https://raw.githubusercontent.com/CarineRey/pcoc/master/data/det/cyp_coding.phy_phyml_tree.txt -P tree_dir
+>mv tree_dir/cyp_coding.phy_phyml_tree.txt tree_dir/tree.nw
+>```
+> The other species trees used in the **PCOC** paper are available here: https://github.com/CarineRey/pcoc/tree/master/data/sim/tree_dir
+
+A typical **PCOC** simulation and detection pipeline is composed of three main steps:
+* A. Define the convergent scenario(s)
+* B. Simulate the data accordingly (this will be different under different scenarios)
+* C. Test for convergence in the simulated data using different methods (including **PCOC**)
+
+Thus, **PCOC** command-lines will be divided into "blocks" that correspond to the different steps in this pipeline. Prior to each analysis, you will have to define the directory containing your tree(s) (`-td` option) and the output directory (`-o` option).
+
+ ```{sh}
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim [REST OF OPTIONS]
+```
+Below, we'll go through all the three "steps"... step by step.
+
+
+### A. Define the convergent scenarios
+
+In both situations (user-defined or random scenario), **PCOC** will *randomly* choose ONE number of convergent events between a minimum (`c_min`) and a maximum number (`c_max`). If you use `-c`, the number of convergent events will be fixed to `-c`. (`c` can still be used in combination with `c_max` to pick `-c` convergent events among `-c_max` events.)
+
+To run **PCOC** multiple times and test different scenarios, use the `-n_sc` option. For instance, to repeat the test 10 times:
+ ```{sh}
+ pcoc_sim.py [...]  -n_sc 10  [...]
+```
+
+ * If you have a given convergent scenario, you have to set the scenario (the so-called `$scenario` variable [used above](#iii-optional-the-3rd-step-is-to-visualize-the-final-tree-with-colored-labeled-branches-to-ascertain-that-no-branch-has-been-forgotten-during-2nd-step)) using the same syntax defined in the [previous section](#--in-the-2nd-step-you-use-the-numbered-tree-output-of-the-1st-step-to-write-a-string-corresponding-to-the-convergent-scenario-you-are-interested-in).
+
+    The `c_max` will be fixed as the total number of convergent events in the given scenario and the default `c_min` is 2 (except if you set `--c_min` to other value > 2). *Note that* `c_min` *has to be above 2 because convergence has to happen in at least 2 clades. Likewise,* `c_max` *has to be below the species number.*
+
+    For instance, in the Besnard et al. (2009) dataset, `c_max` = 5. If you want to force **PCOC** to test these 5 events, use `-c 5` (If you set `c_max 5`, **PCOC** will randomly choose a number of events between 2 and 5 among the 5 possible).
+     ```{sh}
+     $scenario="8,0,1,2,3,4,5,6,7/49,45,46,47,48/38/98,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97/137,133,134,135,136"
+     pcoc_sim.py [...]  -m $scenario  [...]
+    ```
+
+* If you want to test random convergent scenarios:
+
+
+    You have to fix the `c_max` and the `c_min` of convergent event and **PCOC** will randomly place them in the tree. ( You can use the `--plot_event_repartition` option to see the distribution in the tree).
+
+    *Note: To be fair when you compare 2 and 7 events in a topology, PCOC will first draw up the maximum number of convergent events and then randomly choose a number between those two (between the* `c_min` *and the* `c_max` *– except if you use* `-c`*) . In fact, it is more simple to place 2 events closest to the root of the tree than 7.*
+
+    ```{sh}
+    pcoc_sim.py [...]  -c_min 2 -c_max 7 [...] #this is overwritten by the -m option
+    ```
+
+
+**PCOC** can not modify the species tree topology but can modify the branch lengths. You can:
+
+* multiply all the branch lengths by a factor X using `--flg X`
+* change all the branch length by a same value X using `--bl_new X`
+
+
+### B. Simulate the data according to the convergent scenario
+ 
+Once **PCOC** has placed the convergent events on the species tree, it will use the tree to generate:
+
+* an alignment corresponding to this convergent scenario
+
+* another alignment corresponding to a non-convergent scenario (the same tree but without convergent evolution). *This allows for measuring the rate of false-positives.*
+
+*Of note: the length of the alignments can be set with* `-n_sites`.
+
+Sequence generation is based on the evolution of sequences from the root to the leaves of the tree according to amino-acid profiles (*i. e.* sets of amino-acid frequencies).
+**PCOC** uses the C60 profiles (containing 60 amino-acid profiles) defined in [(Si Quang et al, 2009)](https://doi.org/10.1093/bioinformatics/btn445). Among those 60 profiles, 1 couple is picked and the first profile is qualified as "ancestor" and the second as "convergent".
+
+In the convergent scenario, **PCOC** "traverses" the tree starting from the root with the ancestor profile. Once it reaches a node with a convergent transition, **PCOC** switches from the ancestor to the convergent profile. The other nodes keep the ancestral profile. *In the non-convergent scenario, the ancestor profile is applied to all nodes.*
+
+*Alternatively, you can use the C10 profiles (containing 10 amino-acid profiles) instead of C60 using* `-CATX_sim 10`.
+
+By default, only one couple of profiles is used for a scenario but you can use the `-nb_sampled_couple` to increase this number. This will generate multiple sets of independent alignments corresponding to the same convergent scenario.
+
+
+To increase the realism of the simulation, you can add some noise in the simulated data. You can either:
+    
+* add noise in the alignment by using different profiles in the non-convergent part of the tree (see **PCOC** paper) using `--ali_noise`
+
+* add noise in the scenario by modifying the branch lengths after simulating the data using `--bl_noise`. This will allow using a different tree for the simulation and the detection part by mimicking mis-estimated branch lengths.
+
+
+
+### C. Test for convergence in the simulated data using different methods (including **PCOC**)
+
+Finally, `pcoc_sim.py` can use and compare 3 methods to detect convergence in the simulated dataset (see **PCOC** paper for more details):
+*  the **PCOC** models using `-pcoc`
+*  a method detecting identical substitutions in convergent clades using `-ident` (first defined in [Zhang and Kumar (1997)](https://doi.org/10.1093/oxfordjournals.molbev.a025789)) 
+*  a topological method using `-topo` (defined in [Parker et al. (2013)](https://www.nature.com/articles/nature12511)) 
+
+For instance, to compare the **PCOC** method and the topological method only, use 
+
+```{sh}
+pcoc_sim.py [...]  -pcoc -topo #do not include -ident
+```
+
+By default, C10 amino-acid profiles are used in the estimation part instead of the C60 amino-acid profiles in the simulation part. *Alternatively, you can use the C60 profiles instead of C10 using* `-CATX_est 60`. *Note that* `-CATX_est` *is different from* `-CATX_sim` *used in the simulation part.*
+
+## 2. Output files
+
+Results are in the folder `output_pcoc_det/RUN_yyyymmdd_hhmmss/` where `yyyymmdd_hhmmss` corresponds to the date and time of the analysis.
+
+You will find:
+
+* 1. `run_metadata.tsv`: a tabular file containing a summary of the used options:
+
+    >|                                              |                  |
+    >|----------------------------------------------|------------------|
+    >| RunID                                        | 20180111_174413  |
+    >| Input trees                                  | tree.nw          |
+    >| Run PCOC method                              | Yes              |
+    >| Run identical method                         | Yes              |
+    >| Run topological method                       | Yes              |
+    >| Number of simulated sites                    | 100              |
+    >| Profile categories use during estimation     | 10               |
+    >| Profile categories use during simulation     | 60               |
+    >|[...]                                         | [...]            |
+
+* 2. `tree_metadata.tsv`: a file containing the link between the result directory name and the tree file name for each input tree. (Contain also the execution time)
+
+    >| Tree_# | Tree_filename | Execution time |
+    >|--------|---------------|----------------|
+    >| Tree_1 | tree.nw       | 32.9199180603  |
+    >| [...]  |               |                |
+
+* 3. `pcoc_sim.log`: a log file
+
+* 4. a result directory `Tree_i` for each input tree containing:
+
+    + a. `BenchmarkResults.tsv`: a tabular file containing metadata and performance statistics for each Method and for different Threshold, for each simulated dataset.
+
+        >| RunID           | InputTree | ScenarioID | SimuCoupleID | C1    | C2 | DistanceSimuCouple | Method      | Threshold | FN    | FP  | TN    | TP    | Sensitivity | Specificity | MCC    | NumberOfConvergentEvents | NumberOfSites|
+        >|-----------------|-----------|------------|--------------|-------|----|--------------------|-------------|-----------|-------|-----|-------|-------|-------------|-------------|--------|--------------------------|---------------|
+        >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | PC          | 0.7       | 26.0  | 2.0 | 98.0  | 74.0  | 0.74        | 0.98        | 0.7416 | 5                        | 100           |
+        >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | PCOC        | 0.7       | 0.0   | 1.0 | 99.0  | 100.0 | 1.0         | 0.99        | 0.9900 | 5                        | 100           |
+        >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | OC          | 0.7       | 0.0   | 2.0 | 98.0  | 100.0 | 1.0         | 0.98        | 0.98019| 5                        | 100           |
+        >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | Topological | 0.7       | 16.0  | 3.0 | 97.0  | 84.0  | 0.84        | 0.97        | 0.81693| 5                        | 100           |
+        >| [...]           | [...]     | [...]      | [...]        | [...] |[...]| [...]             | [...]       | [...]     | [...] |[...]| [...] | [...] | [...]       | [...]       | [...]  | [...]                    | [...]         |
+        >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | Identical   | NA        | 100.0 | 0.0 | 100.0 | 0.0   | 0.0         | 1.0         | 0.0    | 5                        | 100           |
+
+    + b. `Metadata_Scenarios.tsv`: a tabular file containing metadata for each scenario (Number of convergent transitions,  Number of leaves, ... )
+
+        >| ScenarioID | numberOfLeaves | Execution_time | InputTree | [...] |
+        >|------------|----------------|----------------|-----------|-------|
+        >| Scenario_1 | 41             | 32.8589060307  | tree.nw   | [...] |
+        >| [...]        |                |                |           |       |
+
+    + c. a directory `nw_trees` containing newick formated trees annotated with convergent transitions for each scenario. You will find 2 prefix:
+        + `tree` corresponding to the input topology tree without modification
+        + `tree_conv` corresponding to the topology tree with modifications link to the topological method
+
+## 3. Some examples taken from the PCOC paper
+
+In this section, some command-lines used in the **PCOC** paper will be used as examples but option values have been changed to reduce the computational time.
+
+The 2nd figure of the paper addresses the impact of:
+
+1. the number of convergent events on the ability to detect convergence.
+
+```{sh}
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 180 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c_max 7 -cpu 8 --pcoc --ident --topo -CATX_est 10 -CATX_sim 60
+```
+
+2. the impact of branch lengths on the ability to detect convergence.
+
+```{sh}
+bl_l="0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1"
+for bl in $bl_l
+do
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 32 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c 5 -c_max 7 -cpu 8 --pcoc --ident --topo  -CATX_est 10 -CATX_sim 60 -bl_new $bl
+done
+```
+
+Some figures of the supplementary data address the robustness of the **PCOC** models towards some noisy simulated dataset.
+
+1. noise in the alignment (for example Supplementary figure S8)
+
+```{sh}
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 180 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c_max 7 -cpu 8 --pcoc --ident --topo -CATX_est 10 -CATX_sim 60 --ali_noise
+```
+2. noise add in the branch length after simulate the alignment (for example Supplementary figure S9)
+
+```{sh}
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 180 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c_max 7 -cpu 8 --pcoc --ident --topo -CATX_est 10 -CATX_sim 60 --bl_noise
+```
+
 
 ![](etc/logo.png)
-
-# Tools:
-
-The pcoc-toolkit is composed of 3 tools:
-
-* pcoc_sim.py: [(usage)](#pcoc_simpy-usage)
-
-simulates an alignment and a scenario of convergent evolution according to the PCOC model for each tree of a directory.
-
-
-* pcoc_det.py: [(usage)](#pcoc_detpy-usage)
-
-detects sites of an alignment under convergent evolution according to the PCOC model.
-It requires an input alignment, an input tree and the number of nodes where the convergent transitions occurred.
-
-
-
-* pcoc_num_tree.py: [(usage)](#pcoc_num_treepy-usage)
-
-allows a user to number the nodes of an input tree so as to set the nodes where convergent transitions occurred in pcoc_sim.py and pcoc_det.py
-
-
-
-# Installation and Usage:
-
-docker is the easiest way to use the pcoc-toolkit locally.
-
-For example to use pcoc_sim.py, without installation you just have to type:
-
- * If you want to have user permission on output files:
-
-```
-# run as user (to have user permission on output files)
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc [tool].py [options]
-```
-
- * If you want to have root permission on output files:
-
-```
-# run as root (to have root permission on output files)
-docker run -v $PWD:$PWD --rm carinerey/pcoc [tool].py [options]
-```
-
-To get all options:
-
-```docker run --rm carinerey/pcoc```
-
-
-or only for a specific tool:
-
-```docker run --rm carinerey/pcoc [tool].py -h```
-
-
-Docker update after an update of pcoc-toolkit:
-
-```docker pull carinerey/pcoc```
-
-
-# Example:
-
-
-## Simulation:
-
-```{sh}
-mkdir -p example
-cd example
-wget https://raw.githubusercontent.com/Ensembl/ensembl-compara/release/89/scripts/pipeline/species_tree.39mammals.branch_len.nw -P trees
-
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_sim.py -td $PWD/trees -o $PWD/output_pcoc --pcoc --topo --ident
-```
-
-Results will be found in $PWD/output_pcoc/RUN_yyyymmdd_hhmmss/
-
-You will find:
-
-  * Run_metadata.tsv: a tabular file with metadata about this run
-  * Tree_metadata.tsv: a tabular file with metadata about all input trees
-  * Tree_#: for each input tree a directory containing results for this input tree:
-
-    * Metadata_Scenarios.tsv: a tabular file with metadata about this input tree
-    * BenchmarkResults.tsv: a tabular file which summarizes the number of TP/FP/TN/FN/... for each used methods (--pcoc/--ident/--topo), for different thresholds, and for different couples of profiles used to simulate the data ( see --nb_sampled_couple, min_dist_CAT)
-    * nw_trees:  a directory containing for each scenario the newick formated tree
-    * sequences:  a directory containing for each scenario, all simulated alignments (the option --no_clean_seqs must be used, otherwise the sequences are discarded)
-    * likelihood_summaries:  a directory containing for each scenario, likelihood summaries (the option --get_likelihood_summaries must be used)
-    * plot_tree_ali:  a directory containing for each scenario, a plot with the tree, the alignment and the posterior probabilities per site for each used method (the option --plot_ali must be used)
-
-## Detection:
-
-```{sh}
-mkdir -p example
-cd example
-
-## Get the data
-mkdir -p data
-### tree
-wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/phylogeny.nwk -P data/
-tree=$PWD/data/phylogeny.nwk
-### alignment
-wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/alignments/SLC26A5.fasta -P data/
-ali=$PWD/data/SLC26A5.fasta
-
-
-## First identify the nodes with convergent transitions with pcoc_num_tree.py
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/num_tree.pdf
-
-## In the num_tree.pdf, get the numbers of the branches with the convergent transitions.
-## Here we are interested in the branches leading to the Microbat and the Dolphin, so nodes 0 and 3:
-## You can check your combination using the -m parameter, which will produce a pdf of the tree where the convergent branches lead to red nodes.
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_num_tree.py -t $tree -o $PWD/data/colored_num_tree.pdf -m 0/3
-
-## Then run pcoc_det on your alignment
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3
-
-## if you want to have a nice plot of the sites detected as convergent you can use the option --plot with or without the option --reorder
-## With the --reorder option:
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
-## Without the --reorder option:
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot
-## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder
-
-
-## another example with several convergent branches, with OC applied on branches 11, 6, and 15, and PC applied on all of 11,9,10,6,15:
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot
-
-
-```
-Results will be found in the folder $PWD/output_pcoc_det/RUN_yyyymmdd_hhmmss/ where "yyyymmdd_hhmmss" corresponds to the time of the analysis.
-
-You will find:
-
-  * Run_metadata.tsv: a tabular file with metadata about this run
-  * pcoc_det.log: a log file
-  * ali.results.tsv: a tabular file with posterior probabilities for each position according the PCOC models
-  * ali.filtered_results.tsv: the same file but filtered for positions with a posterior probability superior to the threshold of one of the PCOC models (see -f/-f_pcoc/-f_pc/-f_oc)
-  * fasta: a directory containing filtered position fasta (only if --no_cleanup_fasta has been used)
-  * ali_plot_complete_ali.pdf: a plot of the tree, the complete alignment and the posterior probability according to PCOC models (only if --plot_complete_ali has been used)
-  * ali_plot_filtered_ali_PCOC.pdf: the same plot as ali_plot_complete_ali.pdf but filtered for the positions with a posterior probability according to the PCOC model above its threshold (only if --plot)
-  * ali_plot_filtered_ali_PC.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but for the PC model (only if --plot)
-  * ali_plot_filtered_ali_OC.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but for the OC model (only if --plot)
-  * ali_plot_filtered_ali_union.pdf: the same plot as ali_plot_filtered_ali_PCOC.pdf but filtered for the positions with a posterior probability according one of the PCOC models above its threshold (only if --plot)
-
-# Options by tool:
-
-* [pcoc_sim.py usage](#pcoc_simpy-usage)
-* [pcoc_det.py usage](#pcoc_detpy-usage)
-* [pcoc_num_tree.py usage](#pcoc_num_treepy-usage)
-
-
-## pcoc_sim.py usage:
-
-```
-usage: pcoc_sim.py [-h] [--version] [-cpu CPU] -td TREE_DIR -o OUTPUT_DIR
-                   [-n_sc INT] [-m "x/y,z/..."] [-c_max INT] [-c INT]
-                   [-c_min INT] [-cr FLOAT] [-flg FLOAT] [-bl_new FLOAT]
-                   [--ali_noise] [--bl_noise]
-                   [-nb_sampled_couple NB_SAMPLED_COUPLE] [-n_sites N_SITES]
-                   [-CATX_sim {10,60}] [-min_dist_CAT FLOAT] [--plot_ali]
-                   [--get_likelihood_summaries] [--no_clean_seqs]
-                   [-CATX_est {10,60}] [--pcoc] [--ident] [--topo]
-                   [--plot_event_repartition] [--no_cleanup]
-                   [-LD_LIB LD_LIBRARY_PATH] [--debug]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --version             show program's version number and exit
-  -cpu CPU              Number of cpu to use. (default: 1)
-
-required arguments:
-  -td TREE_DIR, --tree_dir TREE_DIR
-                        Directory name containing input trees.
-  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
-                        Output directory name. (Default output)
-
-Convergent scenarios simulation options:
-  -n_sc INT             Number of convergent scenarios draw up from each input
-                        tree. (default: 1)
-  -m "x/y,z/...", --manual_mode "x/y,z/..."
-                        User defined convergent transition/branches.
-                        Transition node must be the first number and
-                        independent events must be separed by a "/". ex:
-                        "1,2,3/67/55,56" (default: None)
-  -c_max INT            Maximum number of potential convergent transitions
-                        (=convergent events). First, this number of events are
-                        draw up in the tree, then the wanted number of event
-                        is randomly chosen among them. It is to avoid any bias
-                        when you want to compared 2 and 7 events. (default: 8)
-  -c INT                Number of convergent transitions (=convergent events).
-                        If not defined, random between min events and max
-                        events
-  -c_min INT            Minimum number of transition (=convergent events).
-                        (default: 2)
-  -cr FLOAT             Maximum ratio between the number of convergent/non
-                        convergent leaves. (default: No limits)
-  -flg FLOAT            For each input tree, branch length multiplicator.
-                        (default: no modification)
-  -bl_new FLOAT         For each input tree, replace all branch lengths by
-                        [FLOAT]. (default: no modification)
-  --ali_noise           Add noisy events in the convergent scenario.
-  --bl_noise            Add noise in the branch lengths of of tree for the
-                        detection process.
-
-Alignment simulation options:
-  -nb_sampled_couple NB_SAMPLED_COUPLE
-                        For each convergent scenario, number of simulated
-                        alignment with different sampled couple of profiles
-                        (Ancestral/Convergent). (default: 1)
-  -n_sites N_SITES      Number of simulated sites per alignment. (default:
-                        100)
-  -CATX_sim {10,60}     Profile categories to simulate data (10->C10 or
-                        60->C60). (default: 60)
-  -min_dist_CAT FLOAT   Minimum distance between Ancestral and Convergent
-                        profiles to simulate the alignment (default: no
-                        limits)
-  --plot_ali            For each couple of profiles, plot a summary of the
-                        convergent scenario containing the tree and the
-                        alignment.
-  --get_likelihood_summaries
-                        For each couple of profiles, write a summary of the
-                        likelihoods per site.
-  --no_clean_seqs       Do not cleanup the sequences after the run.
-
-Benchmark options:
-  -CATX_est {10,60}     Profile categories to estimate data (10->C10 or
-                        60->C60). (default: 10)
-  --pcoc                Use the PCOC model approach to detect site under
-                        convergent evolution.
-  --ident               Use the ancestral reconstruction approach to detect
-                        site under convergent evolution.
-  --topo                Use the topological approach to detect site under
-                        convergent evolution.
-  --plot_event_repartition
-                        Plot chosen random convergent events repartition for
-                        each input tree.
-
-Options:
-  --no_cleanup          Do not cleanup the working directory after the run.
-  -LD_LIB LD_LIBRARY_PATH
-                        Redefine the LD_LIBRARY_PATH env variable, bppsuite
-                        library must be present in the $PATH and in the
-                        LD_LIBRARY_PATH
-  --debug               debug mode
-```
-
-## pcoc_det.py usage:
-
-```
-usage: pcoc_det.py [-h] [--version] -t TREE -aa ALI -m "x/y,z/..." -o
-                   OUTPUT_DIR [-CATX_est {10,60}] [-f FILTER_T]
-                   [-f_pcoc FILTER_T_PCOC] [-f_pc FILTER_T_PC]
-                   [-f_oc FILTER_T_OC] [--plot] [-ph PH] [--reorder] [--gamma]
-                   [--max_gap_allowed MAX_GAP_ALLOWED] [--plot_complete_ali]
-                   [--no_cleanup_fasta] [--no_cleanup]
-                   [-LD_LIB LD_LIBRARY_PATH] [--debug]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --version             show program's version number and exit
-
-Required arguments:
-  -t TREE, --tree TREE  Input tree filename
-  -aa ALI, --ali ALI    Input amino-acid aligment filename
-  -m "x/y,z/...", --manual_mode "x/y,z/..."
-                        User defined convergent transition/branches.
-                        Transition node must be the first number and
-                        independent events must be separed by a "/". ex:
-                        "1,2,3/67/55,56" (default: None)
-  -o OUTPUT_DIR, --output_dir OUTPUT_DIR
-                        Output directory name
-
-Options:
-  -CATX_est {10,60}     Profile categorie to estimate data (10->C10 or
-                        60->C60). (default: 10)
-  -f FILTER_T, --filter_t FILTER_T
-                        ALL model: Posterior probability threshold to put
-                        result in "filtered" results. (default: 0.99)
-  -f_pcoc FILTER_T_PCOC, --filter_t_pcoc FILTER_T_PCOC
-                        PCOC model: Posterior probability threshold to put
-                        result in "filtered" results. If = -1, take the value
-                        of -f, if > 1, discard this model. (default: -1)
-  -f_pc FILTER_T_PC, --filter_t_pc FILTER_T_PC
-                        PC model: Posterior probability threshold to put
-                        result in "filtered" results. If = -1, take the value
-                        of -f, if > 1, discard this model.(default: -1)
-  -f_oc FILTER_T_OC, --filter_t_oc FILTER_T_OC
-                        OC model: Posterior probability threshold to put
-                        result in "filtered" results. If = -1, take the value
-                        of -f, if > 1, discard this model.(default: -1)
-  --plot                Plot the tree and the filtered sites of the alignment
-                        with their corresponding score.
-  -ph PH                Add these positions in the filtered position and
-                        highlight them with a star in the plot
-  --reorder             reorder the filtered plot by score.categories (>=
-                        0.99, >=0.9, >= 0.8, < 0.8)
-  --gamma               Use rate_distribution=Gamma(n=4) instead of Constant()
-  --max_gap_allowed MAX_GAP_ALLOWED
-                        max_gap_allowed, must be between 0 and 100
-  --plot_complete_ali   Plot the tree and which site of alignment with its
-                        corresponding score. (Can take time to be open)
-  --no_cleanup_fasta    Do not cleanup the fasta directory after the run.
-  --no_cleanup          Do not cleanup the working directory after the run.
-  -LD_LIB LD_LIBRARY_PATH
-                        Redefine the LD_LIBRARY_PATH env variable, bppsuite
-                        library must be present in the $PATH and in the
-                        LD_LIBRARY_PATH
-  --debug               debug mode
-```
-
-## pcoc_num_tree.py usage:
-
-```
-usage: pcoc_num_tree.py [-h] [--version] -t TREE -o OUTPUT [-m "x/y,z/..."]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --version             show program's version number and exit
-
-Required arguments:
-  -t TREE, --tree TREE  input tree name
-  -o OUTPUT, --output OUTPUT
-                        Output file (pdf)
-
-Options:
-  -m "x/y,z/...", --manual_mode_test "x/y,z/..."
-                        Highlight, in the output plot, user defined convergent
-                        transition/branches. Transition node must be the first
-                        number and independent events must be separed by a
-                        "/". ex: "1,2,3/67/55,56" (default: None)
-```
