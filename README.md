@@ -1,5 +1,6 @@
 # PCOC
 
+# Introduction
 (For full explanation of the pipeline, see the [**PCOC** paper](https://doi.org/10.1101/247296)).
 
 **PCOC** is a convergent substitution detection tool with two main facets:
@@ -16,10 +17,7 @@
 
         * you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
 
-
-***
-
-**Table of contents:**
+# **Table of contents:**
 
    * [I. Using <strong>PCOC</strong> to detect convergence in an empirical dataset](#i-using-pcoc-to-detect-convergence-in-an-empirical-dataset)
       * [1. Prerequisite on input data](#1-prerequisite-on-input-data)
@@ -35,9 +33,6 @@
          * [C. Test for convergence in the simulated data using different methods (including <strong>PCOC</strong>)](#c-test-for-convergence-in-the-simulated-data-using-different-methods-including-pcoc)
       * [2. Output files](#2-output-files)
       * [3. Some examples taken from the PCOC paper](#3-some-examples-taken-from-the-pcoc-paper)
-
-
-***
 
 # I. Using **PCOC** to detect convergence in an empirical dataset
 
