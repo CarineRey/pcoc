@@ -1,6 +1,5 @@
 # PCOC
 
-# Introduction
 (For full explanation of the pipeline, see the [**PCOC** paper](https://doi.org/10.1101/247296)).
 
 **PCOC** is a convergent substitution detection tool with two main facets:
@@ -17,7 +16,10 @@
 
         * you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
 
-## **Table of contents:**
+
+***
+
+**Table of contents:**
 
    * [I. Using <strong>PCOC</strong> to detect convergence in an empirical dataset](#i-using-pcoc-to-detect-convergence-in-an-empirical-dataset)
       * [1. Prerequisite on input data](#1-prerequisite-on-input-data)
@@ -33,6 +35,9 @@
          * [C. Test for convergence in the simulated data using different methods (including <strong>PCOC</strong>)](#c-test-for-convergence-in-the-simulated-data-using-different-methods-including-pcoc)
       * [2. Output files](#2-output-files)
       * [3. Some examples taken from the PCOC paper](#3-some-examples-taken-from-the-pcoc-paper)
+
+
+***
 
 # I. Using **PCOC** to detect convergence in an empirical dataset
 
@@ -361,7 +366,13 @@ By default, C10 amino-acid profiles are used in the estimation part instead of t
 
 ## 2. Output files
 
-Results are in the folder `output_pcoc_det/RUN_yyyymmdd_hhmmss/` where `yyyymmdd_hhmmss` corresponds to the date and time of the analysis.
+To have an example output, you can use the following command line adapted from the example (see below).
+
+```{sh}
+$CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 1 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c_max 7 -c 5 --pcoc --ident --topo
+```
+
+Results are in the folder `output_pcoc_sim/RUN_yyyymmdd_hhmmss/` where `yyyymmdd_hhmmss` corresponds to the date and time of the analysis.
 
 You will find:
 
@@ -374,12 +385,10 @@ You will find:
     >| Run PCOC method                              | Yes              |
     >| Run identical method                         | Yes              |
     >| Run topological method                       | Yes              |
-    >| Number of simulated sites                    | 100              |
-    >| Profile categories use during estimation     | 10               |
-    >| Profile categories use during simulation     | 60               |
+    >| Number of simulated sites                    | 50              |
     >|[...]                                         | [...]            |
 
-* 2. `tree_metadata.tsv`: a file containing the link between the result directory name and the tree file name for each input tree. (Contain also the execution time)
+* 2. `tree_metadata.tsv`: a correspondence table between the result directory name(s) `Tree_i` and the tree file name(s). (This contain also the execution time). *In this tutorial we have only used 1 tree but this table is useful if use more input trees (you would then have* `Tree_1`, `Tree_2`, *etc.).* 
 
     >| Tree_# | Tree_filename | Execution time |
     >|--------|---------------|----------------|
@@ -390,7 +399,7 @@ You will find:
 
 * 4. a result directory `Tree_i` for each input tree containing:
 
-    + a. `BenchmarkResults.tsv`: a tabular file containing metadata and performance statistics for each Method and for different Threshold, for each simulated dataset.
+    + a. `BenchmarkResults.tsv`: a tabular file containing metadata (columns "RunID", "InputTree", ..., "DistanceSimuCouple") and performance statistics ("FN", ... , "MCC") for each method ("Method") and for each threshold ("Threshold") used, for each simulated dataset. "NumberOfConvergentEvents" and "NumberOfSites" are other metadata related to the scenario and to the alignment.
 
         >| RunID           | InputTree | ScenarioID | SimuCoupleID | C1    | C2 | DistanceSimuCouple | Method      | Threshold | FN    | FP  | TN    | TP    | Sensitivity | Specificity | MCC    | NumberOfConvergentEvents | NumberOfSites|
         >|-----------------|-----------|------------|--------------|-------|----|--------------------|-------------|-----------|-------|-----|-------|-------|-------------|-------------|--------|--------------------------|---------------|
@@ -401,16 +410,20 @@ You will find:
         >| [...]           | [...]     | [...]      | [...]        | [...] |[...]| [...]             | [...]       | [...]     | [...] |[...]| [...] | [...] | [...]       | [...]       | [...]  | [...]                    | [...]         |
         >| 20180111_174413 | tree.nw   | Scenario_1 | A53_C44      | 53    | 44 | 0.424326507329     | Identical   | NA        | 100.0 | 0.0 | 100.0 | 0.0   | 0.0         | 1.0         | 0.0    | 5                        | 100           |
 
-    + b. `Metadata_Scenarios.tsv`: a tabular file containing metadata for each scenario (Number of convergent transitions,  Number of leaves, ... )
+    + b. `Metadata_Scenarios.tsv`: a tabular file containing (a lot of) metadata for each scenario (Number of convergent transitions,  Number of leaves, ... ). Column names should be explicit enough.
 
         >| ScenarioID | numberOfLeaves | Execution_time | InputTree | [...] |
         >|------------|----------------|----------------|-----------|-------|
         >| Scenario_1 | 41             | 32.8589060307  | tree.nw   | [...] |
         >| [...]        |                |                |           |       |
 
-    + c. a directory `nw_trees` containing newick formated trees annotated with convergent transitions for each scenario. You will find 2 prefix:
+    + c. a directory `nw_trees` containing NHX formatted trees annotated with convergent transitions for each scenario. You will find 2 prefix:
         + `tree` corresponding to the input topology tree without modification
         + `tree_conv` corresponding to the topology tree with modifications link to the topological method
+    
+        Each node is labeled by a string starting with  
+        `&&NHX:ND=[NODE NUMBER]:T=True/False:C=True/False`. `T` refers to a node with convergent transition and `C` to nodes with a convergent profile. *In case you used* `--ali_noise` *option, a new field in node labels is added:*  
+        `Cz=False/[NUMBER OF NOISY PROFILE]` *(in the tree with prefix* `annotated_` *).*
 
 ## 3. Some examples taken from the PCOC paper
 
