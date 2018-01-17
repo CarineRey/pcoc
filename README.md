@@ -460,5 +460,6 @@ $CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 180 -nb_sampl
 $CMD_PCOC_DOCKER pcoc_sim.py -td tree_dir -o output_pcoc_sim -n_sc 180 -nb_sampled_couple 1 -n_sites 50 -c_min 2 -c_max 7 -cpu 8 --pcoc --ident --topo -CATX_est 10 -CATX_sim 60 --bl_noise
 ```
 
+___
 
-![](etc/logo.png)
+Have fun with ![](etc/logo.png) !!
