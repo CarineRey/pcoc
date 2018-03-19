@@ -731,6 +731,12 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             plot_data.make_tree_ali_detect_combi(reptree, AC_fasta_file, Out_12, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[12])
             plot_data.make_tree_ali_detect_combi(reptree, A_fasta_file, Out_11, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[11])
 
+        if not args.no_cleanup:
+            remove_folder(repest)
+            os.mkdir(repest)
+            if not args.no_clean_seqs:
+                remove_folder(repseq)
+                os.mkdir(repseq)
 
 
     if not args.no_cleanup:
