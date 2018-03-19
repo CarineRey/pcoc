@@ -323,14 +323,14 @@ if args.manual_mode:
 metadata_run_dico["Number of scenarios per input tree"] = Nbsimul
 metadata_run_dico["Maximum number of convergent events"] = maxTrans
 metadata_run_dico["Minimum number of convergent events"] = minTrans
-metadata_run_dico["Maximum rate of the number of Convergent/Non-convergent leafs"] = maxConvRate
+metadata_run_dico["Maximum rate of the number of Convergent/Non-convergent leaves"] = maxConvRate
 metadata_run_dico["Number of simulated sites"] = Nsites
 
 logger.info("Number of scenarios per input tree (= 1 tree and 1 set of convergent events):\t%s", Nbsimul)
 logger.info("Number of simulated sites:\t%s", Nsites)
 logger.info("Maximum number of convergent events:\t%s", maxTrans)
 logger.info("Minimum number of convergent events:\t%s", minTrans)
-logger.info("Maximum rate of the number of Convergent/Non-convergent leafs:\t%s", maxConvRate)
+logger.info("Maximum rate of the number of Convergent/Non-convergent leaves:\t%s", maxConvRate)
 
 
 NbCat_Sim = args.CATX_sim
@@ -485,8 +485,8 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
 
         sys.exit(1)
 
-    metadata_simu_dico["numberOfLeafs"] = numberOfLeafs
-    metadata_simu_dico["numberOfLeafsWithTransitions"] = numberOfLeafsWithTransitions
+    metadata_simu_dico["numberOfLeaves"] = numberOfLeafs
+    metadata_simu_dico["numberOfLeavesWithTransitions"] = numberOfLeafsWithTransitions
 
     repseq="%s/%s"%(repseq0,name0)
     repseq=repseq.replace("//","/")
