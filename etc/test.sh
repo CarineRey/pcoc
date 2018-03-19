@@ -28,11 +28,11 @@ docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TRE
 
 
 echo TOPO IDENT PCOC NO_NOISE
-cat $OUTPUT_DIR/test1/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 8,4,5,14,16-19 | grep -e Threshold -e "0.9$" -e "NA$"
+cat $OUTPUT_DIR/test1/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 4,8,9-12,13 | grep -e Threshold -e "0.$" -e "NA"
 
 echo TOPO IDENT PCOC BL_NOISE
-cat $OUTPUT_DIR/test2/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 8,4,5,14,16-19 | grep -e Threshold -e "0.9$" -e "NA$"
+cat $OUTPUT_DIR/test2/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 4,8,9-12,13 | grep -e Threshold -e "0.9" -e "NA"
 
 echo TOPO IDENT PCOC ALI_NOISE
-cat $OUTPUT_DIR/test3/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 8,4,5,14,16-19 | grep -e Threshold -e "0.9$" -e "NA$"
+cat $OUTPUT_DIR/test3/RUN*/Tree_1/BenchmarkResults.tsv | cut -f 4,8,9-12,13 | grep -e Threshold -e "0.9" -e "NA"
 

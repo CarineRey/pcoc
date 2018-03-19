@@ -818,6 +818,8 @@ for tree_filename in lnf:
     df_concat = [df for df in [metada_simu_het, metada_simu_topo, metada_simu_sub] if not df.empty]
     if df_concat:
         df_cat = pd.concat(df_concat)
+        #df_cat = df_cat["RunID","InputTree","ScenarioID","SimuCoupleID","C1","C2","DistanceSimuCouple","Method","Threshold","FN","FP","TN","TP","Sensitivity","Specificity","MCC","NumberOfConvergentEvents","NumberOfSites","PosteriorProbabilityType"]]
+        df_cat = df_cat[["RunID","InputTree","ScenarioID","SimuCoupleID","C1","C2","DistanceSimuCouple","Method","Threshold","FN","FP","TN","TP","Sensitivity","Specificity","MCC","NumberOfConvergentEvents","NumberOfSites"]]
         df_cat.to_csv(OutDirNamePrefixTree + "/BenchmarkResults.tsv", sep='\t', index=False)
 
     if args.plot_event_repartition:
