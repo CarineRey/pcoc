@@ -146,7 +146,13 @@ def get_method(P):
 ##                       PCOC model                                   ##
 ########################################################################
 
-def dico_typechg_new(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID="", dist_C1_C2=None):
+#$def dico_typechg(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID="", dist_C1_C2=None):
+def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID="", dist_C1_C2=None):
+    
+    repest = g_tree.repest
+    N = g_tree.n_events 
+    tree = os.path.basename(g_tree.init_tree_fn)
+    
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
 
     ## 11 : sequences generees par C1-C1
@@ -474,14 +480,19 @@ def dico_typechg_het_det(N,repest,repseq,ali_filename, n_sites, tree="", NbCat_E
 ########################################################################
 
 
-def outdiff_new(tr,name,repseq,reptree,repest,c1,c2):
+def outdiff(c1,c2, name, g_tree):
+  t_fn = g_tree.annotated_tree_fn_est
+  repseq = g_tree.repseq
+  reptree = g_tree.reptree
+  repest = g_tree.repest
+    
   laa=list("ARNDCQEGHILKMFPSTWYV")
   ##### Sequences
   fasta_file = "%s/%s.fa" %(repseq,name)
   ali = AlignIO.read(fasta_file, "fasta")
 
   ##### Tree
-  tr = Tree("%s/annotated_tree.nhx" %(reptree))
+  tr = Tree(t_fn)
   l_branch_with_transition = tr.search_nodes(T="True")
 
 
@@ -567,7 +578,10 @@ def outdiff_new(tr,name,repseq,reptree,repest,c1,c2):
         f.write("%d\t%d\t%d\t%d\n"%(diffone[i],diffall[i],diffdeb[i],mdiff[i]))
 
 
-def dico_typechg_obs_sub(C1,C2,N,repest,name_AC,tree="", n_sites = 1000,  ID= "", dist_C1_C2 = ""):
+def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1_C2 = ""):
+    N = g_tree.n_events
+    repest = g_tree.repest
+    tree = os.path.basename(g_tree.init_tree_fn)
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
 
 ## 11 : sequences generees par C1-C1
@@ -658,10 +672,14 @@ def dico_typechg_obs_sub(C1,C2,N,repest,name_AC,tree="", n_sites = 1000,  ID= ""
 
 
 
-def dico_typechg_topo(C1, C2, N, repest, name_AC, tree = "", set_t1 = [], n_sites = 0, ID = "", lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], NbCat_Est = 10, dist_C1_C2 = ""):
+def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "", lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], NbCat_Est = 10, dist_C1_C2 = ""):
     ### 11 : sequences generees par C1-C1
     ### 12 : sequences generees par C1-C2
 
+    N = g_tree.n_events
+    repest = g_tree.repest
+    tree = os.path.basename(g_tree.init_tree_fn)
+    
     simu_i = name_AC.split("_")[1]
 
     lsites = range(n_sites)

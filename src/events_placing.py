@@ -20,6 +20,8 @@
 #
 
 import random
+import sys
+import os
 import numpy as np
 from ete3 import Tree, TreeStyle, TextFace, NodeStyle
 import itertools
@@ -27,6 +29,177 @@ import itertools
 
 import logging
 logger = logging.getLogger("pcoc.events_placing")
+
+
+
+class conv_events(object):
+    def __init__(self,nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, all_possibilities_of_transitions, numberOfLeafsWithTransitions, numberOfLeafs):
+        self.nodesWithTransitions = nodesWithTransitions
+        self.nodesWithTransitions_sim = [x for x in nodesWithTransitions]
+        self.nodesWithTransitions_est = [x for x in nodesWithTransitions]
+
+        self.all_possibilities_of_transitions = all_possibilities_of_transitions
+
+        self.nodesWithConvergentModel = nodesWithConvergentModel
+        self.nodesWithConvergentModel_sim = [x for x in nodesWithConvergentModel]
+        self.nodesWithConvergentModel_est = [x for x in nodesWithConvergentModel]
+
+        self.nodesWithAncestralModel = nodesWithAncestralModel
+        self.nodesWithAncestralModel_sim = [x for x in nodesWithAncestralModel]
+        self.nodesWithAncestralModel_est = [x for x in nodesWithAncestralModel]
+
+        self.numberOfLeafsWithTransitions = numberOfLeafsWithTransitions
+        self.numberOfLeafsWithTransitions_sim = numberOfLeafsWithTransitions
+        self.numberOfLeafsWithTransitions_est = numberOfLeafsWithTransitions
+
+        self.numberOfLeafs = numberOfLeafs
+
+
+    def get_nodes_sim_TorC(self):
+        return(self.nodesWithTransitions_sim + self.nodesWithConvergentModel_sim)
+    def get_nodes_est_TorC(self):
+        return(self.nodesWithTransitions_est + self.nodesWithConvergentModel_est)
+
+    def get_number_nodes_sim(self,cz_nodes):
+        logger.info(unlist(cz_nodes.values()))
+        
+        return(len(self.nodesWithTransitions_sim+
+                   self.nodesWithConvergentModel_sim+
+                   self.nodesWithAncestralModel_sim+
+                   unlist(cz_nodes.values()))
+               )
+    def get_number_nodes_est(self):
+        return(len(self.nodesWithTransitions_est+
+                   self.nodesWithConvergentModel_est+
+                   self.nodesWithAncestralModel_est)
+               )
+
+
+class gene_tree(object):
+    def __init__(self,ini_tree_fn, manual_mode_nodes):
+        self.init_tree_fn = ini_tree_fn
+        self.init_tree = None
+
+        self.annotated_tree = None
+
+        self.conv_events = None
+
+        self.manual_mode_nodes = manual_mode_nodes
+
+
+        self.cz_nodes = None
+
+        self.numberOfLeafs = None
+
+    def init_tree_sim(self,flg, bl_new):
+        self.flg = flg
+        self.bl_new = bl_new
+        self.init_tree = init_tree(self.init_tree_fn)
+        self.numberOfLeafs = len(self.init_tree.get_tree_root().get_leaves()) + 1
+
+    def init_inter_dir(self,name0, repseq0, repest0, reptree0, repplottreeali0, replikelihoodsummary0, repbppconfig, plot_ali, get_likelihood_summaries):
+        repseq="%s/%s"%(repseq0,name0)
+        repseq=repseq.replace("//","/")
+        repest="%s/%s"%(repest0,name0)
+        repest=repest.replace("//","/")
+        reptree="%s/%s"%(reptree0,name0)
+        reptree=reptree.replace("//","/")
+        repplottreeali="%s/%s"%(repplottreeali0,name0)
+        repplottreeali=repplottreeali.replace("//","/")
+        replikelihoodsummary="%s/%s"%(replikelihoodsummary0,name0)
+        replikelihoodsummary=replikelihoodsummary.replace("//","/")
+
+        if not os.path.exists(repseq) and not os.path.exists(repest) \
+           and not os.path.exists(reptree) and not os.path.exists(repplottreeali):
+            os.mkdir(repseq)
+            os.mkdir(repest)
+            os.mkdir(reptree)
+            if plot_ali:
+                os.mkdir(repplottreeali)
+            if get_likelihood_summaries:
+                os.mkdir(replikelihoodsummary)
+        else:
+            logger.error("%s/%s must not exist", repseq0,name0)
+            sys.exit(1)
+
+
+        self.repseq                = repseq
+        self.repest                = repest
+        self.reptree               = reptree
+        self.repplottreeali        = repplottreeali
+        self.replikelihoodsummary  = replikelihoodsummary
+        self.repbppconfig          = repbppconfig
+
+
+    def add_noisy_profils(self,NbCat):
+       self.init_tree, self.cz_nodes, r_cz = noise_tree(self.init_tree, NbCat = NbCat)
+
+    def placeNTransitionsInTree(self,n_events, minTrans, maxTrans, maxConvRate):
+        self.n_events = n_events
+        self.minTrans = minTrans
+        self.maxTrans = maxTrans
+        self.maxConvRate = maxConvRate
+
+        self.annotated_tree, self.conv_events = placeNTransitionsInTree(n_events, maxTrans, maxConvRate, self.init_tree, manual_mode_nodes = self.manual_mode_nodes, nf=self.init_tree_fn)
+        self.numberOfNodes = len(self.annotated_tree.get_descendants())
+
+
+    def conv_events_is_ok(self):
+        return (len(self.conv_events.nodesWithConvergentModel) >= 1)
+
+    def resolve_conflicts_between_noisy_and_conv_profils(self):
+        if self.cz_nodes:
+            for (cz, nodes) in self.cz_nodes.items():
+                t_node = nodes[0]
+                self.conv_events.nodesWithAncestralModel_sim = list(set(self.conv_events.nodesWithAncestralModel_sim) - set(nodes))
+                if not t_node in set(self.conv_events.get_nodes_sim_TorC()):
+                    nodes = nodes[1:]
+                    self.cz_nodes[cz] = [t_node] + list(set(nodes) - set(self.conv_events.get_nodes_sim_TorC()))
+                else:
+                    self.cz_nodes[cz] = list(set(nodes) - set(self.conv_events.get_nodes_sim_TorC()))
+            logger.debug("nodesWithNoisyModel: \n\t-%s", "\n\t-".join(["C%s: %s" %(cz, nodes) for (cz,nodes) in self.cz_nodes.items()]))
+
+        logger.debug("nodesWithAncestralModel: %s", self.conv_events.nodesWithAncestralModel)
+        logger.debug("nodesWithAncestralModel_sim: %s", self.conv_events.nodesWithAncestralModel_sim)
+        logger.debug("nodesWithConvergentModel: %s", self.conv_events.nodesWithConvergentModel)
+        logger.debug("nodesWithConvergentModel_sim: %s", self.conv_events.nodesWithConvergentModel_sim)
+        logger.debug("nodesWithTransitions: %s", self.conv_events.nodesWithTransitions)
+        logger.debug("numberOfNodes: %s", self.numberOfNodes)
+        logger.debug("len: %s tot_sim : %s ", self.conv_events.get_number_nodes_sim(self.cz_nodes), self.numberOfNodes)
+        logger.debug("len: %s tot_est : %s ", self.conv_events.get_number_nodes_est(), self.numberOfNodes)
+
+        if self.conv_events.get_number_nodes_sim(self.cz_nodes) != self.numberOfNodes:
+            logger.debug("annotated_tree: %s", self.annotated_tree.get_ascii(attributes=["Cz","C"]))
+            sys.exit(1)
+
+    def mk_tree_for_simu(self,topo_met=True, plot=False):
+        (self.tree_annotated, self.tree_conv_annotated, allbranchlength, convbranchlength) = mk_tree_4_simu(self, topo_met=topo_met, plot=plot)
+
+        self.tree_fn_sim     = self.reptree + "/tree.nhx"
+        self.tree_fn_est     = self.reptree + "/tree.nhx"
+        self.treeconv_fn_est = self.reptree + "/tree_conv.nhx"
+        
+        self.annotated_tree_fn_sim = "%s/annotated_tree.nhx" %(self.reptree)
+        self.annotated_tree_fn_est = "%s/annotated_tree.nhx" %(self.reptree)
+        
+        return (allbranchlength, convbranchlength)
+    
+    def add_noise_in_events_def(self,ev_noise):
+        pass
+
+    def add_noise_in_bl_tree_est(self,topo_met):
+        (bl_before, bl_err, bl_after) = noise_bl(self.annotated_tree, self.reptree, vnodes=self.conv_events.get_nodes_est_TorC(), topo_met=topo_met)
+        median_err = np.median(bl_err)
+        sd_err = np.std(bl_err)
+        mean_err = np.mean(bl_err)
+        logger.info("Median bl err: %s", median_err)
+        logger.info("Sd bl err: %s", median_err)
+        logger.info("Mean bl err: %s", mean_err)
+
+        self.tree_fn_est     = self.reptree + "/noisy_tree.nhx"
+        self.treeconv_fn_est = self.reptree + "/noisy_tree_conv.nhx"
+
+        return (mean_err, sd_err, median_err)
 
 # Basic tree style
 tree_style = TreeStyle()
@@ -136,10 +309,17 @@ def build_conv_topo(annotated_tree, vnodes):
 
       return tconv
 
-def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWithTransitions, flg = 1, bl_new = -1, topo_met = False, plot = False, cz_nodes = {}):
-
-  vnodes = nodesWithConvergentModel+nodesWithTransitions
-
+def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
+  
+  conv_combi_events = g_tree.conv_events
+  cz_nodes = g_tree.cz_nodes
+  annotated_tree = g_tree.annotated_tree
+  reptree = g_tree.reptree
+  flg = g_tree.flg 
+  bl_new = g_tree.bl_new
+  
+  vnodes = conv_combi_events.get_nodes_sim_TorC()
+  
   ## multiply branch lengths
   if flg != 1:
     logger.warning("multiply branch lengths by: %s", flg)
@@ -180,7 +360,7 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
         cols = ["#008000","#800080","#007D80","#9CA1A2","#A52A2A","#ED8585","#FF8EAD","#8EB1FF","#FFE4A1","#ADA1FF"]
         col_i = 0
 
-        for Cz in cz_nodes.keys():
+        for Cz in conv_combi_events.cz_nodes.keys():
             cz_nodes_s[Cz] = NodeStyle()
             cz_nodes_s[Cz]["fgcolor"] = cols[col_i]
             cz_nodes_s[Cz]["size"] = 5
@@ -198,7 +378,7 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
             n.set_style(nstyle_C)
         elif cz_nodes_s and n.Cz:
             n.set_style(cz_nodes_s[n.Cz])
-            if n.ND == cz_nodes[n.Cz][0]:
+            if n.ND == conv_combi_events.cz_nodes[n.Cz][0]:
                 add_t(n)
         else:
             n.set_style(nstyle)
@@ -208,7 +388,7 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
   if not topo_met:
       tconv = None
   else:
-      tconv = build_conv_topo(annotated_tree, nodesWithConvergentModel+nodesWithTransitions)
+      tconv = build_conv_topo(annotated_tree, conv_combi_events.get_nodes_sim_TorC())
 
       if cz_nodes:
           tconv.write(format=1, features=["ND","T","C","Cz"],outfile="%s/annotated_tree_conv.nhx"%(reptree),format_root_node=True)
@@ -229,7 +409,7 @@ def mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel,nodesWi
                 n.set_style(nstyle_C)
             elif cz_nodes_s and n.Cz:
                 n.set_style(cz_nodes_s[n.Cz])
-                if n.ND == cz_nodes[int(n.Cz)][0]:
+                if n.ND == conv_combi_events.cz_nodes[int(n.Cz)][0]:
                     add_t(n)
             else:
                 n.set_style(nstyle)
@@ -367,7 +547,7 @@ def randomTransitions_cz(Cz, tree):
 def noise_tree(tree_ini, NbCat = 10):
 
     numberOfLeafs = len(tree_ini.get_tree_root().get_leaves()) + 1
-    logger.debug( "(numberOfLeafs debut: %s)", numberOfLeafs)
+    logger.debug( "(numberOfLeafs start: %s)", numberOfLeafs)
 
     numberOfNodes = len(tree_ini.get_tree_root().get_descendants()) + 1
     len_cz_nodes = numberOfNodes
@@ -398,7 +578,7 @@ def noise_tree(tree_ini, NbCat = 10):
         r_cz = 0
 
     numberOfLeafs = len(tree.get_tree_root().get_leaves()) + 1
-    logger.debug( "(numberOfLeafs fin: %s)", numberOfLeafs)
+    logger.debug( "(numberOfLeafs end: %s)", numberOfLeafs)
 
     return tree, cz_nodes, r_cz
 
@@ -406,13 +586,11 @@ def noise_tree(tree_ini, NbCat = 10):
 def noise_bl(tree, reptree, vnodes=None, topo_met=False):
     noisy_tree =tree.copy(method="deepcopy")
 
-    node_ID = []
     bl_before = []
     bl_err = []
     bl_after = []
 
     for n in noisy_tree.traverse("postorder"):
-        node_ID.append(n.ND)
         bl_before.append(n.dist)
         random_err = np.random.gamma(10,0.1)
         bl_err.append(random_err)
@@ -426,9 +604,9 @@ def noise_bl(tree, reptree, vnodes=None, topo_met=False):
         noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
 
     noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
-    return (node_ID, bl_before, bl_err, bl_after)
+    return (bl_before, bl_err, bl_after)
 
-def placeNTransitionsInTree_new(numTransitions, maxTransitions, maxConvRate, tree_ini, manual_mode_nodes = {}, nf=""):
+def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_ini, manual_mode_nodes = {}, nf=""):
 
   logger.debug( "Wanted Transitions: %s (Max: %s)", numTransitions, maxTransitions)
 
@@ -504,11 +682,13 @@ def placeNTransitionsInTree_new(numTransitions, maxTransitions, maxConvRate, tre
     logger.warning("It seems like it is too difficult to place "+ str(maxTransitions) + " events in this tree:" + nf)
     numberOfLeafsWithTransitions = 0
     numberOfLeafs = 0
+    all_possibilities_of_transitions = []
     nodesWithTransitions = []
     nodesWithConvergentModel = []
     nodesWithAncestralModel = []
     tree_final = Tree()
   else:
+    all_possibilities_of_transitions = nodesWithTransitions
     nodesWithTransitions = [k.ND for k in tree_final.search_nodes(T=1)]
     nodesWithConvergentModel = [k.ND for k in tree_final.search_nodes(C=1, T=0)]
     nodesWithAncestralModel =  [k.ND for k in tree_final.search_nodes(T=0,C=0)]
@@ -531,4 +711,8 @@ def placeNTransitionsInTree_new(numTransitions, maxTransitions, maxConvRate, tre
     else:
         nodesWithAncestralModel.remove(root_ND)
 
-  return tree_final, nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, numberOfLeafsWithTransitions, numberOfLeafs
+  conv_combi_events = conv_events(nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, all_possibilities_of_transitions, numberOfLeafsWithTransitions, numberOfLeafs)
+
+  return tree_final, conv_combi_events
+
+

@@ -7,7 +7,7 @@ import copy
 
 
 import logging
-logger = logging.getLogger("simul_CAT_rand.placing")
+logger = logging.getLogger("pcoc.placing")
 
 
 def unlist(list2d):

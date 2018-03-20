@@ -61,11 +61,23 @@ def write_config(d, estim=True, NbCat=""):
 ##                    BPP simulations                                 ##
 ########################################################################
 
-def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
-               nodesWithConvergentModel, c1, c2, repseq, tree_fn,
-               repbppconfig, number_of_sites=1000,
+#$ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
+#$                nodesWithConvergentModel, c1, c2, repseq, tree_fn,
+#$                repbppconfig, number_of_sites=1000,
+#$                outputInternalSequences="yes", nbCAT=10,
+#$                cz_nodes={}, CzOneChange=True):
+
+def make_simul(name, c1, c2, g_tree, number_of_sites=1000,
                outputInternalSequences="yes", nbCAT=10,
                cz_nodes={}, CzOneChange=True):
+
+    nodesWithAncestralModel  = g_tree.conv_events.nodesWithAncestralModel_sim
+    nodesWithTransitions     = g_tree.conv_events.nodesWithTransitions_sim
+    nodesWithConvergentModel = g_tree.conv_events.nodesWithConvergentModel_sim
+    repseq                   = g_tree.repseq
+    repbppconfig             = g_tree.repbppconfig
+    tree_fn                  = g_tree.tree_fn_sim
+    cz_nodes                 = g_tree.cz_nodes
 
     if not os.path.isfile(tree_fn):
         logger.error("%s is not a file", tree_fn)
@@ -133,10 +145,24 @@ def make_simul(name, nodesWithAncestralModel, nodesWithTransitions,
 ##                    BPP estimations                                 ##
 ########################################################################
 
-def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
-               nodesWithConvergentModel, c1, c2, repseq, tree_fn,
-               repest, repbppconfig, NBCATest=10, suffix="",
-               OneChange=True, ext = ".fa", gamma = False, max_gap_allowed=90,inv_gamma=False):
+
+#$ ef make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
+#$               nodesWithConvergentModel, c1, c2, repseq, tree_fn,
+#$               repest, repbppconfig, NBCATest=10, suffix="",
+#$               OneChange=True, ext = ".fa", gamma = False, max_gap_allowed=90,inv_gamma=False):
+
+
+def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
+               OneChange=True, ext=".fa", gamma=False,
+               max_gap_allowed=90, inv_gamma=False):
+
+    nodesWithAncestralModel  = g_tree.conv_events.nodesWithAncestralModel_est
+    nodesWithTransitions     = g_tree.conv_events.nodesWithTransitions_est
+    nodesWithConvergentModel = g_tree.conv_events.nodesWithConvergentModel_est
+    tree_fn                  = g_tree.tree_fn_est
+    repseq                   = g_tree.repseq
+    repest                   = g_tree.repest
+    repbppconfig             = g_tree.repbppconfig
 
     fasta_file = "%s/%s%s" %(repseq, name, ext)
     #logger.debug("fasta_file: %s",fasta_file )
@@ -199,8 +225,17 @@ def make_estim(name, nodesWithAncestralModel, nodesWithTransitions,
         f_infos = open(info_filename,"w")
         f_infos.close()
 
-def make_estim_conv(name, nodes, c1, repseq, tree_fn, repest,
-                    repbppconfig, suffix="", NBCATest=10, gamma = False, max_gap_allowed=90):
+def make_estim_conv(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max_gap_allowed=90):
+
+
+    repseq        = g_tree.repseq
+    repest        = g_tree.repest
+    repbppconfig  = g_tree.repbppconfig
+
+    tree_fn       = g_tree.treeconv_fn_est
+
+    allNodes = [n.ND for n in g_tree.tree_conv_annotated.traverse() if not n.is_root()]
+    logger.debug(allNodes)
 
     fasta_file = "%s/%s%s" %(repseq, name, ".fa")
     if not os.path.isfile(tree_fn):
@@ -208,7 +243,6 @@ def make_estim_conv(name, nodes, c1, repseq, tree_fn, repest,
     if not os.path.isfile(fasta_file):
         logger.error("%s is not a file", fasta_file)
 
-    allNodes=nodes
 
     n1="\""+ ",".join(map(str, allNodes))+"\""
 

@@ -102,6 +102,9 @@ Options_trees.add_argument('--ali_noise', action="store_true",
 Options_trees.add_argument('--bl_noise', action="store_true",
                     help="Add noise in the branch lengths of of tree for the detection process.",
                     default=False)
+Options_trees.add_argument('--ev_noise',  choices = ["+1", "-1", "=1"],
+                    help="Add noise in the event placing for the detection process. +1 to add an event,  -1 to remove one, =1 to change one. -c must be fix.",
+                    default=False)
 ##############
 
 
@@ -252,6 +255,8 @@ else:
     bl_new = -1
     metadata_run_dico["Branch length remplacement"] = "no"
 
+
+
 #http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
 pattern = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\b")
 
@@ -303,6 +308,26 @@ maxTrans=args.c_max
 minTrans=args.c_min
 maxConvRate=args.cr
 Nsites=args.n_sites
+
+
+ev_noise = args.ev_noise
+if ev_noise:
+    logger.info("Add evenment noise: %s" ,ev_noise)
+    if not args.c:
+        logger.error("-c must be also used if you use --ev_noise")
+        sys.exit(1)
+    if ev_noise == "+1":
+        if maxTrans < (args.c + 1):
+            logger.error("maxTrans must be superior to -c if you use --ev_noise +1 ")
+            sys.exit(1)
+        pass
+    elif ev_noise == "-1":
+        if minTrans >= (args.c - 1):
+            logger.error("minTrans must be inferior or equal to -c -1 if you use --ev_noise -1 ")
+            sys.exit(1)
+        pass
+    elif ev_noise == "=1":
+        pass
 
 
 manual_mode_nodes = {}
@@ -420,22 +445,23 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     metadata_simu_dico["ScenarioID"] = name0
     metadata_simu_dico["RunID"] = date
 
+    g_tree = events_placing.gene_tree(tree_filename, manual_mode_nodes)
+    g_tree.init_tree_sim(flg, bl_new)
+
+    metadata_simu_dico["numberOfLeaves"] = g_tree.numberOfLeafs
     metadata_simu_dico["BranchLengthMultiplicator"] = metadata_run_dico["Branch length multiplicator"]
     metadata_simu_dico["BranchLengthRemplacement"] = metadata_run_dico["Branch length remplacement"]
     metadata_simu_dico["MaxNumberOfConvergentEvents"] = maxTrans
     metadata_simu_dico["MinNumberOfConvergentEvents"] = minTrans
 
-    tree=events_placing.init_tree(tree_filename)
 
     if args.ali_noise:
         logger.info("%s - Addition of noise in the alignment: Yes", name0_info)
         metadata_simu_dico["AliNoise"] = "Yes"
-        tree, cz_nodes, r_cz = events_placing.noise_tree(tree, NbCat = args.CATX_sim)
+        g_tree.add_noisy_profils(args.CATX_sim)
     else:
         logger.info("%s - Addition of noise in the alignment: No", name0_info)
         metadata_simu_dico["AliNoise"] = "No"
-        cz_nodes = {}
-        r_cz = 0
 
     if args.c == 0:
         n_events=random.randrange(minTrans,(maxTrans+1))
@@ -445,10 +471,9 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     logger.info("%s - Number of convergent events:\t%s", name0_info, n_events)
     metadata_simu_dico["NumberOfConvergentEvents"] = n_events
 
-    annotated_tree, nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, numberOfLeafsWithTransitions, numberOfLeafs = events_placing.placeNTransitionsInTree_new(n_events,maxTrans,maxConvRate,tree, manual_mode_nodes = manual_mode_nodes,nf=tree_filename)
+    g_tree.placeNTransitionsInTree(n_events, minTrans, maxTrans, maxConvRate)
 
-    numberOfNodes = len(annotated_tree.get_descendants())
-    if len(nodesWithConvergentModel)==0:
+    if not g_tree.conv_events_is_ok():
         if n_try >=5:
             logger.warning("%s - Impossible to put the convergent events", name0_info)
             return {},[],[],[],[]
@@ -459,97 +484,72 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     else:
         logger.info("%s - Assignment of the convergent events: OK", name0_info)
 
-    nodesWithAncestralModel_sim = [x for x in nodesWithAncestralModel]
-    if cz_nodes:
-        for (cz, nodes) in cz_nodes.items():
-            t_node = nodes[0]
-            nodesWithAncestralModel_sim = list(set(nodesWithAncestralModel_sim) - set(nodes))
-            if not t_node in set(nodesWithTransitions + nodesWithConvergentModel):
-                nodes = nodes[1:]
-                cz_nodes[cz] = [t_node] + list(set(nodes) - set(nodesWithTransitions + nodesWithConvergentModel))
-            else:
-                cz_nodes[cz] = list(set(nodes) - set(nodesWithTransitions + nodesWithConvergentModel))
-          #logger.debug("nodesWithNoisyModel: %s\n", "\n\t-".join(["%s: %s" %(cz,",".join(nodes)) for (cz,nodes) in cz_nodes.items()]))
-        logger.debug("nodesWithNoisyModel: \n%s", "\n\t-".join(["%s: %s" %(cz, nodes) for (cz,nodes) in cz_nodes.items()]))
-        metadata_simu_dico["RatioNoisyNonNoisyLeaves"] = float(len(events_placing.unlist(cz_nodes.values())))/float(numberOfNodes)
+    g_tree.init_inter_dir(name0, repseq0, repest0, reptree0, repplottreeali0, replikelihoodsummary0, repbppconfig, args.plot_ali, args.get_likelihood_summaries)
 
-    logger.debug("nodesWithAncestralModel: %s", nodesWithAncestralModel)
-    logger.debug("nodesWithAncestralModel_sim: %s", nodesWithAncestralModel_sim)
-    logger.debug("nodesWithConvergentModel: %s", nodesWithConvergentModel)
-    logger.debug("nodesWithTransitions: %s", nodesWithTransitions)
-    logger.debug("numberOfNodes: %s", numberOfNodes)
-    logger.debug("len: %s tot : %s ", len(nodesWithTransitions+nodesWithConvergentModel+nodesWithAncestralModel_sim+events_placing.unlist(cz_nodes.values())),numberOfNodes)
+    logger.debug("repseq: %s", g_tree.repseq)
+    logger.debug("repest: %s", g_tree.repest)
+    logger.debug("reptree: %s", g_tree.reptree)
 
-    if len(nodesWithTransitions+nodesWithConvergentModel+nodesWithAncestralModel_sim+events_placing.unlist(cz_nodes.values())) != numberOfNodes:
-        logger.debug("annotated_tree: %s", annotated_tree.get_ascii(attributes=["Cz","C"]))
 
-        sys.exit(1)
+    metadata_simu_dico["numberOfLeavesWithTransitions"] = g_tree.conv_events.numberOfLeafsWithTransitions_sim
 
-    metadata_simu_dico["numberOfLeaves"] = numberOfLeafs
-    metadata_simu_dico["numberOfLeavesWithTransitions"] = numberOfLeafsWithTransitions
+    ###########################
+    # Noise during Simulation #
+    ###########################
+    if args.ali_noise:
+        #a convergent profil replaces a noisy profil if conflict
+        g_tree.resolve_conflicts_between_noisy_and_conv_profils()
 
-    repseq="%s/%s"%(repseq0,name0)
-    repseq=repseq.replace("//","/")
-    repest="%s/%s"%(repest0,name0)
-    repest=repest.replace("//","/")
-    reptree="%s/%s"%(reptree0,name0)
-    reptree=reptree.replace("//","/")
-    repplottreeali="%s/%s"%(repplottreeali0,name0)
-    repplottreeali=repplottreeali.replace("//","/")
-    replikelihoodsummary="%s/%s"%(replikelihoodsummary0,name0)
-    replikelihoodsummary=replikelihoodsummary.replace("//","/")
+    ### Make tree file for simulation:
+    (allbranchlength, convbranchlength) = g_tree.mk_tree_for_simu(topo_met=True, plot=args.plot_ali)
 
-    if not os.path.exists(repseq) and not os.path.exists(repest) \
-       and not os.path.exists(reptree) and not os.path.exists(repplottreeali):
-        os.mkdir(repseq)
-        os.mkdir(repest)
-        os.mkdir(reptree)
-        if args.plot_ali:
-            os.mkdir(repplottreeali)
-        if args.get_likelihood_summaries:
-            os.mkdir(replikelihoodsummary)
+    metadata_simu_dico["AllBranchLength"] = allbranchlength
+    metadata_simu_dico["ConvBranchLength"] = convbranchlength
+
+
+    ###########################
+    # Noise during Estimation #
+    ###########################
+
+    ## ev noise  ##
+    if ev_noise:
+        logger.info("%s - Addition of noise in the convergent events definition: Yes (%s)", name0_info, ev_noise)
+        metadata_simu_dico["EvNoise"] = "Yes"
+        g_tree.add_noise_in_events_def(ev_noise)
     else:
-        logger.error("%s/%s must not exist", repseq0,name0)
-        sys.exit(1)
+        logger.info("%s - Addition of noise in the convergent events definition: No", name0_info)
+        metadata_simu_dico["EvNoise"] = "No"
 
-    logger.debug("repseq: %s", repseq)
-    logger.debug("repest: %s", repest)
-    logger.debug("reptree: %s", repest)
-
+    ## bl noise  ##
     if args.bl_noise:
         logger.info("%s - Addition of noise in the branch lengths: Yes", name0_info)
         metadata_simu_dico["BLNoise"] = "Yes"
-        (node_ID, bl_before, bl_err, bl_after) = events_placing.noise_bl(annotated_tree, reptree, vnodes=nodesWithConvergentModel+nodesWithTransitions, topo_met=args.topo)
-        #logger.debug("node_ID: %s\nbl_before: %s\nbl_err: %s\nbl_after: %s",node_ID, bl_before, bl_err, bl_after)
-        median_err = np.median(bl_err)
-        sd_err = np.std(bl_err)
-        mean_err = np.mean(bl_err)
+        (mean_err, sd_err, median_err) = g_tree.add_noise_in_bl_tree_est(args.topo)
         metadata_simu_dico["Mean_Bl_err"] = mean_err
         metadata_simu_dico["Sd_Bl_err"] = sd_err
         metadata_simu_dico["Median_Bl_err"] = median_err
-        logger.info("Median bl err: %s", median_err)
-        logger.info("Sd bl err: %s", median_err)
-        logger.info("Mean bl err: %s", mean_err)
+
     else:
         logger.info("%s - Addition of noise in the branch lengths: No", name0_info)
         metadata_simu_dico["BLNoise"] = "No"
 
 
-    ### construit les arbres d'etude :
-    (tree_annotated, tree_conv_annotated,  allbranchlength, convbranchlength) = events_placing.mk_tree_4_simu_new(annotated_tree,reptree,nodesWithConvergentModel,nodesWithTransitions, flg = flg, bl_new = bl_new, topo_met=True, plot=args.plot_ali, cz_nodes=cz_nodes)
-
-    metadata_simu_dico["AllBranchLength"] = allbranchlength
-    metadata_simu_dico["ConvBranchLength"] = convbranchlength
+    ###############################################
+    # Profil couple Simulation/Estimation PART ####
+    ###############################################
 
     SampledCATcouples = random.sample(CATcouples, Nb_sampled_couple)
 
+    # Res list
     l_TPFPFNTN_mod_het = []
     l_TPFPFNTN_topo = []
     l_TPFPFNTN_obs_sub = []
+
     k_couple = 0
     for (c1,c2) in SampledCATcouples:
         k_couple+=1
         logger.info("Scenario %s/%s - Couple %s/%s, C1: %s, C2: %s",i, Nbsimul, k_couple, Nb_sampled_couple, c1, c2)
+
         dict_benchmark = {11:{}, 12:{}}
 
         if args.ident:
@@ -557,23 +557,19 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
         else:
             outputInternalSequences = "no"
 
-        tree_simu = reptree + "/tree.nhx"
-        if args.bl_noise:
-            tree_fn_estim = reptree + "/noisy_tree.nhx"
-            treeconv_fn_estim = reptree + "/noisy_tree_conv.nhx"
-        else:
-            tree_fn_estim = reptree + "/tree.nhx"
-            treeconv_fn_estim = reptree + "/tree_conv.nhx"
 
-        logger.debug("Tree estim : %s", tree_fn_estim)
-        logger.debug("Tree_conv estim: %s", treeconv_fn_estim)
+
+        logger.debug("Tree simul : %s", g_tree.tree_fn_sim)
+        logger.debug("Tree estim : %s", g_tree.tree_fn_est)
+        logger.debug("Tree_conv estim: %s", g_tree.treeconv_fn_est)
 
         ### on simule des sequences
         if c1!=c2:
             # Positif
             nameAC="%s_A%d_C%d"%(name0,c1,c2)
-            bpp_lib.make_simul(nameAC,nodesWithAncestralModel_sim,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_simu,repbppconfig,outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim,cz_nodes=cz_nodes)
-            AC_fasta_file = "%s/%s.fa" %(repseq, nameAC)
+#$          bpp_lib.make_simul(nameAC,nodesWithAncestralModel_sim,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_simu,repbppconfig,outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim,cz_nodes=cz_nodes)
+            bpp_lib.make_simul(nameAC,c1,c2,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim)
+            AC_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameAC)
             if not os.path.isfile(AC_fasta_file):
                 logger.error("%s does not exist", AC_fasta_file)
                 sys.exit(1)
@@ -582,8 +578,10 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
 
             # Negatif
             nameA="%s_A%d_C%d"%(name0,c1,c1)
-            bpp_lib.make_simul(nameA,nodesWithAncestralModel_sim,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_simu,repbppconfig,outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim,cz_nodes=cz_nodes)
-            A_fasta_file = "%s/%s.fa" %(repseq, nameA)
+#$          bpp_lib.make_simul(nameA,nodesWithAncestralModel_sim,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_simu,repbppconfig,outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim,cz_nodes=cz_nodes)
+            bpp_lib.make_simul(nameA,c1,c1,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim)
+
+            A_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameA)
             if not os.path.isfile(A_fasta_file):
                 logger.error("%s does not exist", A_fasta_file)
                 sys.exit(1)
@@ -593,26 +591,36 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             if args.pcoc:
                 # Test optimal
                 # Positif
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+#$              bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+#$              bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameAC,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
                 # Negatif
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+#$              bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameA,c1,c1, g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+#$              bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameA,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
                 # Test optimal No One Change
                 # Positif
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+#$              bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+#$              bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
                 # Negatif
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+#$              bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameA,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+#$              bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c2,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameA,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
 
             if args.topo:
                 # Test optimal
 
                 # Positif
-                bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+#$              bpp_lib.make_estim(nameAC,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
                 # Negatif
-                bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
+#$              bpp_lib.make_estim(nameA,nodesWithAncestralModel,nodesWithTransitions,nodesWithConvergentModel,c1,c1,repseq,tree_fn_estim,repest,repbppconfig, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
+                bpp_lib.make_estim(nameA,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
 
             if args.topo or args.pcoc:
                 ### estimations C1C2 et C1C1 ave E1: 1->10 et E2: 1-> 10
@@ -636,26 +644,35 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                         if (e1 == e2) and (args.topo or args.pcoc):
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
-                            bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+#$                          bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameAC, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+#$                              bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
                             # Negatif
-                            bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel,e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+#$                          bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel,e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel,e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+#$                              bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel,e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                                bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
 
                         if (e1 != e2) and args.pcoc:
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
-                            bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
-                            bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+#$                          bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+#$                          bpp_lib.make_estim(nameAC, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1 , e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
                             # Negatif
-                            bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
-                            bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+#$                          bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+#$                          bpp_lib.make_estim(nameA, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn_estim, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
 
                 if args.pcoc:
                     ### Calcul VP FP FN VN Model het
-                    res, bilan = estim_data.dico_typechg_new(c1,c2,n_events,repest,nameAC,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
+#$                  res, bilan = estim_data.dico_typechg_new(c1,c2,n_events,repest,nameAC,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
+                    res, bilan = estim_data.dico_typechg(c1,c2,nameAC,g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
                     l_TPFPFNTN_mod_het.extend(res)
 
                     for k in [11,12]:
@@ -674,42 +691,40 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                                 c2_k = c2
                             df_bilan = pd.DataFrame.from_dict(bilan[k], orient='columns', dtype=None)
                             df_bilan["pos"] = df_bilan["pos"] + 1
-                            df_bilan.to_csv(replikelihoodsummary + '/likelihood_summary_A%s_C%s.pcoc.tsv' %(c1,c2_k), index=False, sep='\t')
+                            df_bilan.to_csv(g_tree.replikelihoodsummary + '/likelihood_summary_A%s_C%s.pcoc.tsv' %(c1,c2_k), index=False, sep='\t')
 
             if args.ident:
                 # Estim
-                estim_data.outdiff_new(tree_annotated, nameAC, repseq, reptree, repest, c1, c2)
-                estim_data.outdiff_new(tree_annotated, nameA, repseq, reptree, repest, c1, c1)
+#$              estim_data.outdiff_new(g_tree.tree_annotated, nameAC, g_tree.repseq, g_tree.reptree, g_tree.repest, c1, c2)
+                estim_data.outdiff(c1, c2, nameAC, g_tree)
+#$              estim_data.outdiff_new(g_tree.tree_annotated, nameA, g_tree.repseq, g_tree.reptree, g_tree.repest, c1, c1)
+                estim_data.outdiff(c1, c1, nameA, g_tree)
 
                 ### Calcul VP FP FN VN obs sub
-                res_sub, bilan_sub = estim_data.dico_typechg_obs_sub(c1,c2,n_events,repest,nameAC,tree = os.path.basename(tree_filename), n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
+                res_sub, bilan_sub = estim_data.dico_typechg_obs_sub(c1,c2,nameAC,g_tree, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
                 l_TPFPFNTN_obs_sub.extend(res_sub)
 
                 for k in [11,12]:
                     dict_benchmark[k]["Identical"] = bilan_sub[k]["p_ident"]
 
             if args.topo:
-
-                nodes = [n.ND for n in tree_conv_annotated.traverse() if not n.is_root()]
-                logger.debug(nodes)
-
                 #OPT
                 # Positif
-                bpp_lib.make_estim_conv(nameAC,nodes,c1,repseq,treeconv_fn_estim,repest,repbppconfig,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+                bpp_lib.make_estim_conv(nameAC,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
                 # Negatif
-                bpp_lib.make_estim_conv(nameA,nodes,c1,repseq,treeconv_fn_estim,repest,repbppconfig,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+                bpp_lib.make_estim_conv(nameA,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
 
                 set_t1 = []
                 for t1 in range(1, (NbCat_Est+1)):
                     set_t1.append(t1)
                     logger.debug ("Estime t1: %s ", t1)
                     # Positif
-                    bpp_lib.make_estim_conv(nameAC,nodes,t1,repseq,treeconv_fn_estim,repest,repbppconfig,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+                    bpp_lib.make_estim_conv(nameAC,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
                     # Negatif
-                    bpp_lib.make_estim_conv(nameA,nodes,t1,repseq,treeconv_fn_estim,repest,repbppconfig,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+                    bpp_lib.make_estim_conv(nameA,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
 
 
-                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2,n_events,repest,nameAC, set_t1=set_t1, tree=os.path.basename(tree_filename), n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
+                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2, nameAC, g_tree, set_t1=set_t1, n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
                 l_TPFPFNTN_topo.extend(res_topo)
 
                 for k in [11,12]:
@@ -723,31 +738,31 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                             c2_k = c2
                         df_bilan_topo = pd.DataFrame.from_dict(bilan_topo[k], orient='columns', dtype=None)
                         df_bilan_topo["pos"] = df_bilan_topo["pos"] + 1
-                        df_bilan_topo.to_csv(replikelihoodsummary + '/likelihood_summary_A%s_C%s.topo.tsv' %(c1,c2_k), index=False, sep='\t')
+                        df_bilan_topo.to_csv(g_tree.replikelihoodsummary + '/likelihood_summary_A%s_C%s.topo.tsv' %(c1,c2_k), index=False, sep='\t')
 
         if args.plot_ali and dict_benchmark != {11:{}, 12:{}}:
-            Out_11 = "%s/tree_ali_%s_%s_negative_sites.pdf"%(repplottreeali, c1, c1)
-            Out_12 = "%s/tree_ali_%s_%s_positive_sites.pdf"%(repplottreeali, c1, c2)
-            plot_data.make_tree_ali_detect_combi(reptree, AC_fasta_file, Out_12, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[12])
-            plot_data.make_tree_ali_detect_combi(reptree, A_fasta_file, Out_11, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[11])
+            Out_11 = "%s/tree_ali_%s_%s_negative_sites.pdf"%(g_tree.repplottreeali, c1, c1)
+            Out_12 = "%s/tree_ali_%s_%s_positive_sites.pdf"%(g_tree.repplottreeali, c1, c2)
+            plot_data.make_tree_ali_detect_combi(g_tree.reptree, AC_fasta_file, Out_12, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[12])
+            plot_data.make_tree_ali_detect_combi(g_tree.reptree, A_fasta_file, Out_11, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[11])
 
         if not args.no_cleanup:
-            remove_folder(repest)
-            os.mkdir(repest)
+            remove_folder(g_tree.repest)
+            os.mkdir(g_tree.repest)
             if not args.no_clean_seqs:
-                remove_folder(repseq)
-                os.mkdir(repseq)
+                remove_folder(g_tree.repseq)
+                os.mkdir(g_tree.repseq)
 
 
     if not args.no_cleanup:
-        remove_folder(repest)
+        remove_folder(g_tree.repest)
         if not args.no_clean_seqs:
-            remove_folder(repseq)
+            remove_folder(g_tree.repseq)
 
     metadata_simu_dico["Execution_time"] = str(time.time() - start_simu)
 
     logger.info("END: %s", name0_info)
-    return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, nodesWithTransitions
+    return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, g_tree.conv_events.nodesWithTransitions_sim
 
 
 num_tree = 1
