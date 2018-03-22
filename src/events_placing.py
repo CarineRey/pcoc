@@ -62,7 +62,7 @@ class conv_events(object):
 
     def get_number_nodes_sim(self,cz_nodes):
         logger.info(unlist(cz_nodes.values()))
-        
+
         return(len(self.nodesWithTransitions_sim+
                    self.nodesWithConvergentModel_sim+
                    self.nodesWithAncestralModel_sim+
@@ -178,14 +178,59 @@ class gene_tree(object):
         self.tree_fn_sim     = self.reptree + "/tree.nhx"
         self.tree_fn_est     = self.reptree + "/tree.nhx"
         self.treeconv_fn_est = self.reptree + "/tree_conv.nhx"
-        
+
         self.annotated_tree_fn_sim = "%s/annotated_tree.nhx" %(self.reptree)
         self.annotated_tree_fn_est = "%s/annotated_tree.nhx" %(self.reptree)
-        
+
         return (allbranchlength, convbranchlength)
-    
-    def add_noise_in_events_def(self,ev_noise):
-        pass
+
+    def add_noise_in_events_def(self, ev_noise):
+        logger.debug("annotated_tree: %s", self.annotated_tree.get_ascii(attributes=["ND","T","C"]))
+        logger.info(self.conv_events.get_number_nodes_est())
+
+        logger.info("before T: %s", self.conv_events.nodesWithTransitions_est)
+        logger.info("before C: %s", self.conv_events.nodesWithConvergentModel_est)
+        logger.info("before A: %s", self.conv_events.nodesWithAncestralModel_est)
+        logger.info(self.conv_events.all_possibilities_of_transitions)
+
+        new_possible_transitions = list(set(self.conv_events.all_possibilities_of_transitions) - set(self.conv_events.nodesWithTransitions_est))
+        new_transitions = []
+        discarded_transistions = []
+
+        if ev_noise == "+1":
+            new_transitions = random.sample(new_possible_transitions, 1)
+        elif ev_noise == "-1":
+            discarded_transistions = random.sample(self.conv_events.nodesWithTransitions_est, 1)
+        elif ev_noise == "=1":
+            discarded_transistions = random.sample(self.conv_events.nodesWithTransitions_est, 1)
+            new_transitions = random.sample(new_possible_transitions, 1)
+
+        new_C = []
+        discarded_C = []
+
+        for ND_nt in new_transitions:
+            nt = self.annotated_tree.search_nodes(ND=ND_nt)
+            logger.debug("annotated_tree: %s", nt[0].get_ascii(attributes=["ND","T","C"]))
+            for nodes in nt[0].traverse():
+                if nodes.ND != ND_nt:
+                    new_C.append(nodes.ND)
+
+        for ND_dt in discarded_transistions:
+                nt = self.annotated_tree.search_nodes(ND=ND_dt)
+                logger.debug("annotated_tree: %s", nt[0].get_ascii(attributes=["ND","T","C"]))
+                for nodes in nt[0].traverse():
+                    if nodes.ND != ND_dt:
+                        discarded_C.append(nodes.ND)
+
+        self.conv_events.nodesWithAncestralModel_est = list(set( self.conv_events.nodesWithAncestralModel_est) - set(new_C) - set(new_transitions)) + discarded_C + discarded_transistions
+        self.conv_events.nodesWithTransitions_est = list(set(self.conv_events.nodesWithTransitions_est)  - set(discarded_transistions)) + new_transitions
+        self.conv_events.nodesWithConvergentModel_est = list(set(self.conv_events.nodesWithConvergentModel_est) - set(discarded_C)) + new_C
+
+        logger.info("after T: %s", self.conv_events.nodesWithTransitions_est)
+        logger.info("after C: %s", self.conv_events.nodesWithConvergentModel_est)#self.nodesWithConvergentModel_est
+        logger.info("after A: %s", self.conv_events.nodesWithAncestralModel_est)#self.nodesWithAncestralModel_est
+        logger.info(self.conv_events.get_number_nodes_est())#self.nodesWithTransitions_est
+
 
     def add_noise_in_bl_tree_est(self,topo_met):
         (bl_before, bl_err, bl_after) = noise_bl(self.annotated_tree, self.reptree, vnodes=self.conv_events.get_nodes_est_TorC(), topo_met=topo_met)
@@ -310,16 +355,16 @@ def build_conv_topo(annotated_tree, vnodes):
       return tconv
 
 def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
-  
+
   conv_combi_events = g_tree.conv_events
   cz_nodes = g_tree.cz_nodes
   annotated_tree = g_tree.annotated_tree
   reptree = g_tree.reptree
-  flg = g_tree.flg 
+  flg = g_tree.flg
   bl_new = g_tree.bl_new
-  
+
   vnodes = conv_combi_events.get_nodes_sim_TorC()
-  
+
   ## multiply branch lengths
   if flg != 1:
     logger.warning("multiply branch lengths by: %s", flg)
