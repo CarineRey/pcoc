@@ -531,7 +531,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
             cz_nodes_s[Cz]["hz_line_color"] = cols[col_i]
             col_i +=1
     
-    sim_root_ND = g_tree.annotated_tree.get_tree_root().ND
+    sim_root_ND = g_tree.outgroup_ND
     print(sim_root_ND)
     
     def my_layout(node):

@@ -142,6 +142,8 @@ class gene_tree(object):
 
         self.annotated_tree, self.conv_events = placeNTransitionsInTree(n_events, maxTrans, maxConvRate, self.init_tree, manual_mode_nodes = self.manual_mode_nodes, nf=self.init_tree_fn)
         self.numberOfNodes = len(self.annotated_tree.get_descendants())
+        
+        self.outgroup_ND = self.annotated_tree.get_tree_root().ND
 
 
     def conv_events_is_ok(self):
@@ -250,23 +252,29 @@ class gene_tree(object):
         vnodes=self.conv_events.get_nodes_est_TorC()
 
         noisy_tree = self.annotated_tree.copy(method="deepcopy")
-        logger.info("sim root %s",noisy_tree.get_tree_root().ND)
+        logger.info("sim root %s",self.outgroup_ND)
 
 
         root_children = noisy_tree.get_tree_root().children
 
         if root_noise == "ll":
             new_outgroup = root_children[0].children[0]
+            self.outgroup_ND = root_children[1].ND
         elif root_noise == "lr":
             new_outgroup = root_children[0].children[1]
+            self.outgroup_ND = root_children[1].ND
         elif root_noise == "rr":
             new_outgroup = root_children[1].children[1]
+            self.outgroup_ND = root_children[0].ND
         elif root_noise == "rl":
             new_outgroup = root_children[1].children[0]
+            self.outgroup_ND = root_children[0].ND
 
         noisy_tree.set_outgroup(new_outgroup)
         
-        logger.info("det root %s",noisy_tree.get_tree_root().ND)
+        
+        
+        logger.info("det root %s",self.outgroup_ND)
 
         new_nodesWithTransitions_est = []
         new_nodesWithConvergentModel_est = []
