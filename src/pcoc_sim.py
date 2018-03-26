@@ -105,6 +105,9 @@ Options_trees.add_argument('--bl_noise', action="store_true",
 Options_trees.add_argument('--ev_noise',  choices = ["+1", "-1", "=1"],
                     help="Add noise in the event placing for the detection process. +1 to add an event,  -1 to remove one, =1 to change one. -c must be fix.",
                     default=False)
+Options_trees.add_argument('--root_noise',  choices = ["ll", "lr","rr","rl"],
+                    help="Add noise in the root placing for the detection process. ll to move the root 2 nodes left, lr to move the root 1 node left and 1 node right, ...",
+                    default=False)
 ##############
 
 
@@ -329,6 +332,23 @@ if ev_noise:
     elif ev_noise == "=1":
         pass
 
+root_noise = args.root_noise
+if root_noise:
+    logger.info("Add root noise: %s" ,root_noise)
+
+metadata_run_dico["AliNoise"]  = "No"
+metadata_run_dico["BlNoise"]   = "No"
+metadata_run_dico["EvNoise"]   = "No"
+metadata_run_dico["RootNoise"] = "No"
+
+if args.ali_noise:
+    metadata_run_dico["AliNoise"] = "Yes"
+if args.bl_noise:
+    metadata_run_dico["BlNoise"] = "Yes"
+if ev_noise:
+    metadata_run_dico["EvNoise"] = ev_noise
+if root_noise:
+    metadata_run_dico["RootNoise"] = root_noise
 
 manual_mode_nodes = {}
 if args.manual_mode:
@@ -532,6 +552,16 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     else:
         logger.info("%s - Addition of noise in the branch lengths: No", name0_info)
         metadata_simu_dico["BLNoise"] = "No"
+    
+    ## root noise ##
+    if root_noise:
+        logger.info("%s - Addition of noise in the root location: Yes", name0_info)
+        metadata_simu_dico["RootNoise"] = "Yes"
+        g_tree.add_noise_in_root_tree_est(root_noise, args.topo)
+
+    else:
+        logger.info("%s - Addition of noise in the root location: No", name0_info)
+        metadata_simu_dico["RootNoise"] = "No"
 
 
     ###############################################
@@ -743,8 +773,8 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
         if args.plot_ali and dict_benchmark != {11:{}, 12:{}}:
             Out_11 = "%s/tree_ali_%s_%s_negative_sites.pdf"%(g_tree.repplottreeali, c1, c1)
             Out_12 = "%s/tree_ali_%s_%s_positive_sites.pdf"%(g_tree.repplottreeali, c1, c2)
-            plot_data.make_tree_ali_detect_combi(g_tree.reptree, AC_fasta_file, Out_12, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[12])
-            plot_data.make_tree_ali_detect_combi(g_tree.reptree, A_fasta_file, Out_11, cz_nodes = cz_nodes, dict_values_pcoc = dict_benchmark[11])
+            plot_data.make_tree_ali_detect_combi(g_tree, AC_fasta_file, Out_12, dict_benchmark = dict_benchmark[12])
+            plot_data.make_tree_ali_detect_combi(g_tree, A_fasta_file, Out_11, dict_benchmark = dict_benchmark[11])
 
         if not args.no_cleanup:
             remove_folder(g_tree.repest)

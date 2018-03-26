@@ -32,6 +32,7 @@ from PyQt4.QtGui import (QGraphicsRectItem, QGraphicsLineItem,
                          QGraphicsTextItem, QGraphicsItem)
 
 import types
+import sys
 
 import logging
 logger = logging.getLogger("pcoc.plot_data")
@@ -139,7 +140,7 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
             else:
                 stick_colors.append("gray")
         self.colors = stick_colors
-        
+
     def draw_colored_boxes(self, h):
 
             stick_colors = self.colors
@@ -199,12 +200,12 @@ class SequencePlotFace_mod(faces.SequencePlotFace):
             self.item =  QGraphicsRectItem(-30, 0, self.width+40, self.height+70)
             #self.item.setPen(QPen(QColor('gray')))
             self.item.setPen(QPen(QColor('white')))
-            
+
             try:
                 put_colored_boxes = self.put_colored_boxes
             except AttributeError:
                 put_colored_boxes = (False, 0)
-                
+
             if put_colored_boxes[0]:
                 (_, tree_h) = put_colored_boxes
                 self.draw_colored_boxes(tree_h)
@@ -245,13 +246,13 @@ class SequenceScoreFace(StaticItemFace):
         self.width = self.nb_values * self.col_w
         self.x_axis = False
         self.hp = []
-    
+
     def draw_fun(self, x, y, val, col_width = 10, col_height = 10, color = "gray"):
         color = get_corr_color(val)
         rect = QGraphicsRectItem(x, y, col_width, col_height, parent = self.item)
         rect.setPen(QPen(QColor('black')))
         rect.setBrush(QColor(color))
-    
+
     def draw_legend(self):
         legend_h = self.height * ((self.nb_models - 1) / float(self.nb_models))
         if legend_h < 35:
@@ -271,13 +272,13 @@ class SequenceScoreFace(StaticItemFace):
             th = text.boundingRect().height()
             # Center text according to masterItem size
             text.setPos(x0 - tw - 7, y_stick - th/2)
-        
+
         for (y1,y2,c) in [(1,1/n_cat*5, 0.99), (1/n_cat*5, 1/n_cat*4, 0.9), (1/n_cat*4, 1/n_cat*3, 0.8), (1/n_cat*3, 1/n_cat*2, 0.7), (1/n_cat*2, 1/n_cat*1, 0.5), (1/n_cat*1, 1/n_cat*0, 0)]:
             y1_stick = legend_h - y1 * legend_h
             y2_stick = legend_h - y2 * legend_h
             self.draw_fun(x0, y1_stick, c, col_width = 10, col_height = y2_stick-y1_stick)
-        
-        
+
+
     def draw_x_axis(self):
         y0 = self.nb_models * self.col_h + 5
         lineItem = QGraphicsLineItem(self.col_w/2,
@@ -330,16 +331,16 @@ class SequenceScoreFace(StaticItemFace):
             rect_h += 30
         self.item = QGraphicsRectItem(0, 0, self.width + 40 , rect_h)
         self.item.setPen(QPen(QColor('white')))
-        
+
         #X axis
-        
+
         if self.x_axis:
             self.draw_x_axis()
 
         # Legend
-        
+
         self.draw_legend()
-        
+
         # Y axes and colo rect
         yi = -1
         for model in ["PCOC", "PC", "OC", "Topological", "Identical"]:
@@ -362,7 +363,7 @@ class SequenceScoreFace(StaticItemFace):
                 th = text.boundingRect().height()
                 ## Center text according to masterItem size
                 text.setPos(self.width + 5, yaxis - th/2)
-                
+
                 # Color rect for each model
                 values = self.dict_values_pcoc[model]
                 for i, val in enumerate(values):
@@ -375,7 +376,7 @@ class SequenceScoreFace(StaticItemFace):
 def get_corr_color(x):
     score = [1,0.99,0.9,0.8,0.7,0.5,0]
     color = ["red", "red",  "orange", "#EFDB00", "#6BAC00", "#7174D0",  "#A3A3A3"]
-    
+
     for i in range(len(score)):
         if x >= score[i]:
             res = color[i]
@@ -393,14 +394,69 @@ tree_style.show_branch_length = True
 tree_style.min_leaf_separation  = 4
 tree_style.branch_vertical_margin   = 2
 
-nstyle_T = NodeStyle()
-nstyle_T["fgcolor"] = "orange"
-#nstyle_T["shape"] = "square"
-nstyle_T["size"] = 5
-nstyle_T["vt_line_color"] = "orange"
-nstyle_T["hz_line_color"] = "orange"
-nstyle_T["vt_line_width"] = 2
-nstyle_T["hz_line_width"] = 2
+nstyle_T_sim = NodeStyle()
+nstyle_T_sim["fgcolor"] = "orange"
+nstyle_T_sim["size"] = 5
+nstyle_T_sim["vt_line_color"] = "orange"
+nstyle_T_sim["hz_line_color"] = "orange"
+nstyle_T_sim["vt_line_width"] = 2
+nstyle_T_sim["hz_line_width"] = 2
+
+nstyle_T_sim_est = NodeStyle()
+nstyle_T_sim_est["fgcolor"] = "orange"
+nstyle_T_sim_est["bgcolor"] = "#CECECE"
+nstyle_T_sim_est["size"] = 5
+nstyle_T_sim_est["vt_line_color"] = "orange"
+nstyle_T_sim_est["hz_line_color"] = "orange"
+nstyle_T_sim_est["vt_line_width"] = 2
+nstyle_T_sim_est["hz_line_width"] = 2
+
+nstyle_T_est = NodeStyle()
+nstyle_T_est["fgcolor"] = "#0052FF"
+nstyle_T_est["bgcolor"] = "#CECECE"
+nstyle_T_est["size"] = 5
+nstyle_T_est["vt_line_color"] = "#0052FF"
+nstyle_T_est["hz_line_color"] = "#0052FF"
+nstyle_T_est["vt_line_width"] = 2
+nstyle_T_est["hz_line_width"] = 2
+
+
+nstyle_C_sim = NodeStyle()
+nstyle_C_sim["fgcolor"] = "orange"
+nstyle_C_sim["size"] = 5
+nstyle_C_sim["vt_line_color"] = "orange"
+nstyle_C_sim["hz_line_color"] = "orange"
+nstyle_C_sim["vt_line_width"] = 2
+nstyle_C_sim["hz_line_width"] = 2
+
+nstyle_C_sim_est = NodeStyle()
+nstyle_C_sim_est["fgcolor"] = "orange"
+nstyle_C_sim_est["bgcolor"] = "#FFE9AD"
+nstyle_C_sim_est["size"] = 5
+nstyle_C_sim_est["vt_line_color"] = "orange"
+nstyle_C_sim_est["hz_line_color"] = "orange"
+nstyle_C_sim_est["vt_line_width"] = 2
+nstyle_C_sim_est["hz_line_width"] = 2
+
+
+nstyle_C_est = NodeStyle()
+nstyle_C_est["fgcolor"] = "#0052FF"
+nstyle_C_est["bgcolor"] = "#FFE9AD"
+nstyle_C_est["size"] = 5
+nstyle_C_est["vt_line_color"] = "#0052FF"
+nstyle_C_est["hz_line_color"] = "#0052FF"
+nstyle_C_est["vt_line_width"] = 2
+nstyle_C_est["hz_line_width"] = 2
+
+
+nstyle = NodeStyle()
+nstyle["fgcolor"] = "#0052FF"
+nstyle["size"] = 5
+nstyle["hz_line_width"] = 2
+nstyle["vt_line_width"] = 2
+nstyle["vt_line_color"] = "#0052FF"
+nstyle["hz_line_color"] = "#0052FF"
+
 
 nstyle_T2 = NodeStyle()
 nstyle_T2["fgcolor"] = "orange"
@@ -410,22 +466,6 @@ nstyle_T2["hz_line_color"] = "orange"
 nstyle_T2["vt_line_width"] = 2
 nstyle_T2["hz_line_width"] = 2
 
-
-nstyle_C = NodeStyle()
-nstyle_C["fgcolor"] = "orange"
-nstyle_C["size"] = 5
-nstyle_C["vt_line_color"] = "orange"
-nstyle_C["hz_line_color"] = "orange"
-nstyle_C["vt_line_width"] = 2
-nstyle_C["hz_line_width"] = 2
-
-nstyle = NodeStyle()
-nstyle["fgcolor"] = "#0052FF"
-nstyle["size"] = 5
-nstyle["hz_line_width"] = 2
-nstyle["vt_line_width"] = 2
-nstyle["vt_line_color"] = "#0052FF"
-nstyle["hz_line_color"] = "#0052FF"
 
 
 def add_t(node):
@@ -439,16 +479,34 @@ def add_t(node):
     nd.border.width = 1
     nd2 = TextFace(" ")
     nd2.fsize = 4
+    
 
     node.add_face(nd, column=0, position = "float")
     node.add_face(nd2, column=1, position = "float")
 
-def make_tree_ali_detect_combi(reptree, ali_nf, Out,
-                               hist_up = "", cz_nodes = {},
-                               x_values=[], hp = [],
-                               dict_values_pcoc = {}, 
-                               reorder = False):
+def add_sim_root(node):
+    nd = TextFace("R")
+    nd.fsize = 4
+    nd.background.color = "#ABABFF"
+    nd.margin_right = 0
+    nd.margin_top = 0
+    nd.margin_left = 0
+    nd.margin_bottom = 0
+    nd.border.width = 1
+    nd2 = TextFace(" ")
+    nd2.fsize = 4
+    
 
+    node.add_face(nd, column=0, position = "float")
+    node.add_face(nd2, column=1, position = "float")
+
+def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
+                               hist_up = "",
+                               x_values=[], hp = [],
+                               dict_benchmark = {},
+                               reorder = False):
+    reptree = g_tree.reptree
+    cz_nodes = g_tree.cz_nodes
     ### Tree
 
     ## Tree style
@@ -457,7 +515,7 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
     phylotree_style.show_branch_length = False
     phylotree_style.draw_guiding_lines  = True
     phylotree_style.min_leaf_separation  = 1
-    
+
     ## For noisy tree
     cz_nodes_s = {}
     if cz_nodes:
@@ -472,7 +530,10 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
             cz_nodes_s[Cz]["vt_line_color"] = cols[col_i]
             cz_nodes_s[Cz]["hz_line_color"] = cols[col_i]
             col_i +=1
-            
+    
+    sim_root_ND = g_tree.annotated_tree.get_tree_root().ND
+    print(sim_root_ND)
+    
     def my_layout(node):
         ## Sequence name
         F = TextFace(node.name, tight_text=True)
@@ -495,22 +556,34 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
             add_face_to_node(seq_face, node, column=1, position='aligned')
 
         ## Nodes style
-        if node.T == "True":
-            node.set_style(nstyle_T)
+        if node.T == "True" and not int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
+            node.set_style(nstyle_T_sim)
             add_t(node)
-        elif node.C == "True":
-            node.set_style(nstyle_C)
+        elif node.T == "True" and int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
+            node.set_style(nstyle_T_sim_est)
+            add_t(node)
+        elif int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
+            node.set_style(nstyle_T_est)
+        elif node.C == "True" and not int(node.ND) in g_tree.conv_events.nodesWithConvergentModel_est:
+            node.set_style(nstyle_C_sim)
+        elif node.C == "True" and int(node.ND) in g_tree.conv_events.nodesWithConvergentModel_est:
+            node.set_style(nstyle_C_sim_est)
+        elif int(node.ND) in g_tree.conv_events.nodesWithConvergentModel_est:
+            node.set_style(nstyle_C_est)
         elif cz_nodes_s and node.Cz != "False":
             node.set_style(cz_nodes_s[int(node.Cz)])
             if int(node.ND) == int(cz_nodes[int(node.Cz)][0]):
                 add_t(node)
         else:
             node.set_style(nstyle)
+        
+        if int(node.ND) == sim_root_ND:
+            add_sim_root(node)
 
     phylotree_style.layout_fn = my_layout
 
     # Get tree dimensions
-    tree_nf = reptree + "/annotated_tree.nhx"
+    tree_nf = g_tree.annotated_tree_fn_est
     logger.debug("tree_nf: %s",tree_nf)
     t = PhyloTree(tree_nf)
     t.link_to_alignment (ali_nf)
@@ -522,17 +595,17 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
 
     ### X axes:
     if not x_values: # Complete representation
-        x_values_up = [x+1 for x in range(0,len(dict_values_pcoc.values()[1]))]
+        x_values_up = [x+1 for x in range(0,len(dict_benchmark.values()[1]))]
         inter = 5
     else: # Filtered representation
         x_values_up = x_values
         inter = 1
-    
-    
+
+
     ### Histogram up
     if hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
         header_hist_value_up = 'Posterior probability (' + hist_up.upper() +' model)'
-        hist_value_up = dict_values_pcoc[hist_up]
+        hist_value_up = dict_benchmark[hist_up]
         # Define emphased lines
         hlines=[0.8, 0.9,0.99]
         hlines_col=['#EFDB00', 'orange', 'red']
@@ -540,7 +613,7 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
         # Type of representation
         kind= 'stick' # bar/curve/stick
 
-        
+
 
         y_values_up = hist_value_up
 
@@ -553,7 +626,7 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
         hist.x_values = x_values_up
         hist.x_inter_values = inter
         hist.set_sticks_color()
-        
+
 
         if reorder:
             # draw colored boxes
@@ -563,19 +636,19 @@ def make_tree_ali_detect_combi(reptree, ali_nf, Out,
 
 
     ### Rect all model:
-    sequencescorebox = SequenceScoreFace(dict_values_pcoc, col_width=10)
+    sequencescorebox = SequenceScoreFace(dict_benchmark, col_width=10)
     sequencescorebox.hp = hp
     sequencescorebox.x_values = x_values_up
     sequencescorebox.x_inter_values = inter
     if not hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
         sequencescorebox.x_axis=True
-      
+
     phylotree_style.aligned_header.add_face(sequencescorebox, 1)
-        
+
 
     tree_nf = reptree + "/annotated_tree.nhx"
     logger.debug("tree_nf: %s",tree_nf)
-    
+
     res = t.render(Out, tree_style=phylotree_style)
     del t
     return(res)

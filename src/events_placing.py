@@ -186,12 +186,12 @@ class gene_tree(object):
 
     def add_noise_in_events_def(self, ev_noise):
         logger.debug("annotated_tree: %s", self.annotated_tree.get_ascii(attributes=["ND","T","C"]))
-        logger.info(self.conv_events.get_number_nodes_est())
+        logger.debug(self.conv_events.get_number_nodes_est())
 
-        logger.info("before T: %s", self.conv_events.nodesWithTransitions_est)
-        logger.info("before C: %s", self.conv_events.nodesWithConvergentModel_est)
-        logger.info("before A: %s", self.conv_events.nodesWithAncestralModel_est)
-        logger.info(self.conv_events.all_possibilities_of_transitions)
+        logger.debug("before T: %s", self.conv_events.nodesWithTransitions_est)
+        logger.debug("before C: %s", self.conv_events.nodesWithConvergentModel_est)
+        logger.debug("before A: %s", self.conv_events.nodesWithAncestralModel_est)
+        logger.debug(self.conv_events.all_possibilities_of_transitions)
 
         new_possible_transitions = list(set(self.conv_events.all_possibilities_of_transitions) - set(self.conv_events.nodesWithTransitions_est))
         new_transitions = []
@@ -226,10 +226,10 @@ class gene_tree(object):
         self.conv_events.nodesWithTransitions_est = list(set(self.conv_events.nodesWithTransitions_est)  - set(discarded_transistions)) + new_transitions
         self.conv_events.nodesWithConvergentModel_est = list(set(self.conv_events.nodesWithConvergentModel_est) - set(discarded_C)) + new_C
 
-        logger.info("after T: %s", self.conv_events.nodesWithTransitions_est)
-        logger.info("after C: %s", self.conv_events.nodesWithConvergentModel_est)#self.nodesWithConvergentModel_est
-        logger.info("after A: %s", self.conv_events.nodesWithAncestralModel_est)#self.nodesWithAncestralModel_est
-        logger.info(self.conv_events.get_number_nodes_est())#self.nodesWithTransitions_est
+        logger.debug("after T: %s", self.conv_events.nodesWithTransitions_est)
+        logger.debug("after C: %s", self.conv_events.nodesWithConvergentModel_est)#self.nodesWithConvergentModel_est
+        logger.debug("after A: %s", self.conv_events.nodesWithAncestralModel_est)#self.nodesWithAncestralModel_est
+        logger.debug(self.conv_events.get_number_nodes_est())#self.nodesWithTransitions_est
 
 
     def add_noise_in_bl_tree_est(self,topo_met):
@@ -243,8 +243,54 @@ class gene_tree(object):
 
         self.tree_fn_est     = self.reptree + "/noisy_tree.nhx"
         self.treeconv_fn_est = self.reptree + "/noisy_tree_conv.nhx"
-
+        
         return (mean_err, sd_err, median_err)
+
+    def add_noise_in_root_tree_est(self, root_noise, topo_met):
+        vnodes=self.conv_events.get_nodes_est_TorC()
+
+        noisy_tree = self.annotated_tree.copy(method="deepcopy")
+        logger.info("sim root %s",noisy_tree.get_tree_root().ND)
+
+
+        root_children = noisy_tree.get_tree_root().children
+
+        if root_noise == "ll":
+            new_outgroup = root_children[0].children[0]
+        elif root_noise == "lr":
+            new_outgroup = root_children[0].children[1]
+        elif root_noise == "rr":
+            new_outgroup = root_children[1].children[1]
+        elif root_noise == "rl":
+            new_outgroup = root_children[1].children[0]
+
+        noisy_tree.set_outgroup(new_outgroup)
+        
+        logger.info("det root %s",noisy_tree.get_tree_root().ND)
+
+        new_nodesWithTransitions_est = []
+        new_nodesWithConvergentModel_est = []
+        new_nodesWithAncestralModel_est = []
+
+        if not topo_met:
+            tconv = None
+        else:
+            noisy_tconv = build_conv_topo(noisy_tree, vnodes)
+            noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_root_tree_conv.nhx"%(self.reptree), format_root_node=True)
+
+        noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_root_tree.nhx"%(self.reptree), format_root_node=True)
+        
+        if self.cz_nodes:
+            noisy_tree.write(format=1, features=["ND","T","C","Cz"],outfile="%s/annotated_tree_est.nhx"%(self.reptree),format_root_node=True)
+        else:
+            noisy_tree.write(format=1, features=["ND","T","C"],outfile="%s/annotated_tree_est.nhx"%(self.reptree),format_root_node=True)
+
+
+        self.tree_fn_est     = self.reptree + "/noisy_root_tree.nhx"
+        self.treeconv_fn_est = self.reptree + "/noisy_root_tree_conv.nhx"
+        self.annotated_tree_fn_est = "%s/annotated_tree_est.nhx" %(self.reptree)
+
+        return
 
 # Basic tree style
 tree_style = TreeStyle()
@@ -405,7 +451,7 @@ def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
         cols = ["#008000","#800080","#007D80","#9CA1A2","#A52A2A","#ED8585","#FF8EAD","#8EB1FF","#FFE4A1","#ADA1FF"]
         col_i = 0
 
-        for Cz in conv_combi_events.cz_nodes.keys():
+        for Cz in cz_nodes.keys():
             cz_nodes_s[Cz] = NodeStyle()
             cz_nodes_s[Cz]["fgcolor"] = cols[col_i]
             cz_nodes_s[Cz]["size"] = 5
@@ -423,7 +469,7 @@ def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
             n.set_style(nstyle_C)
         elif cz_nodes_s and n.Cz:
             n.set_style(cz_nodes_s[n.Cz])
-            if n.ND == conv_combi_events.cz_nodes[n.Cz][0]:
+            if n.ND == cz_nodes[n.Cz][0]:
                 add_t(n)
         else:
             n.set_style(nstyle)
@@ -454,7 +500,7 @@ def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
                 n.set_style(nstyle_C)
             elif cz_nodes_s and n.Cz:
                 n.set_style(cz_nodes_s[n.Cz])
-                if n.ND == conv_combi_events.cz_nodes[int(n.Cz)][0]:
+                if n.ND == cz_nodes[int(n.Cz)][0]:
                     add_t(n)
             else:
                 n.set_style(nstyle)
@@ -628,7 +674,7 @@ def noise_tree(tree_ini, NbCat = 10):
     return tree, cz_nodes, r_cz
 
 
-def noise_bl(tree, reptree, vnodes=None, topo_met=False):
+def noise_bl(tree, reptree, vnodes=None, topo_met=False, cz_nodes= {} ):
     noisy_tree =tree.copy(method="deepcopy")
 
     bl_before = []
@@ -647,9 +693,11 @@ def noise_bl(tree, reptree, vnodes=None, topo_met=False):
     else:
         noisy_tconv = build_conv_topo(noisy_tree, vnodes)
         noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
+    
 
     noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
     return (bl_before, bl_err, bl_after)
+
 
 def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_ini, manual_mode_nodes = {}, nf=""):
 
