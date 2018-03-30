@@ -10,7 +10,7 @@ install:
   - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
   - docker pull carinerey/pcoc
   - docker images
-  - docker build --cache-from carinerey/pcoc:latest -t carinerey/pcoc .
+  - docker build --cache-from carinerey/pcoc:latest -t carinerey/pcoc -f etc/Dockerfile .
 script:
   - make test
   - make test_det
