@@ -1,5 +1,7 @@
 # PCOC
 
+[![Build Status](https://travis-ci.org/CarineRey/pcoc.svg?branch=master)](https://travis-ci.org/CarineRey/pcoc)
+
 (For full explanation of the pipeline, see the [**PCOC** paper](https://doi.org/10.1101/247296)).
 
 **PCOC** is a convergent substitution detection tool with two main facets:
