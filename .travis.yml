@@ -12,7 +12,8 @@ install:
   - docker images
 script:
   - docker images
-  - docker build -t carinerey/pcoc .
+  - ls 
+  - docker build --pull --cache-from carinerey/pcoc .
   - make test
   - make test_det
   - make clean_test
