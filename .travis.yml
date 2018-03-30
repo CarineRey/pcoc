@@ -1,0 +1,24 @@
+language: python
+sudo: required
+services:
+  - docker
+os:
+  - linux
+
+install:
+  - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
+  - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
+  - docker pull carinerey/pcoc:$BRANCH
+before_script:
+  - make build_docker
+script:
+  - make test
+  - make test_det
+  - make clean_test
+
+after_success:
+  - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+- if [[ $BRANCH == "master" ]]; then export TAG=""; else export TAG=":$BRANCH"; fi
+  - export REPO_pcoc=$DOCKER_USER/pcoc$TAG
+  - docker build -t $REPO_pcoc .
+  - docker push $REPO_pcoc
