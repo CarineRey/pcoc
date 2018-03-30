@@ -9,7 +9,9 @@ install:
   - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
   - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
   - docker pull carinerey/pcoc
+  - docker images
 script:
+  - docker images
   - docker build -t carinerey/pcoc .
   - make test
   - make test_det
