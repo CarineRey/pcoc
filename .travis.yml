@@ -18,7 +18,7 @@ script:
 
 after_success:
   - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
-- if [[ $BRANCH == "master" ]]; then export TAG=""; else export TAG=":$BRANCH"; fi
+  - if [[ $BRANCH == "master" ]]; then export TAG=""; else export TAG=":$BRANCH"; fi
   - export REPO_pcoc=$DOCKER_USER/pcoc$TAG
   - docker build -t $REPO_pcoc .
   - docker push $REPO_pcoc
