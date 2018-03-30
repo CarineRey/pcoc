@@ -5,7 +5,7 @@ set -e
 IMAGE_NAME=pcoc
 DOCKERFILE_DIR=.
 REPO=carinerey/$IMAGE_NAME
-docker build -t $REPO $DOCKERFILE_DIR
+docker build -t $REPO -f etc/Dockerfile $DOCKERFILE_DIR
 
 if [[ $1 == "push_yes" ]]
 then 

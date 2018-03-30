@@ -77,11 +77,12 @@ RUN cmake  . && \
     (make -j 4 || make) && \
     make install 
 
-COPY src/* /usr/local/bin/
-COPY etc/data/trees_ex /data/trees_ex
+
+COPY data/* /data/
 COPY README.md /usr/local/etc/
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY etc/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 CMD ["cat", "/usr/local/etc/README.md"]
 ENTRYPOINT ["bash", "/usr/local/bin/entrypoint.sh"]
 
+COPY src/* /usr/local/bin/
