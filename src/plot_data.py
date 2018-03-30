@@ -504,7 +504,8 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
                                hist_up = "",
                                x_values=[], hp = [],
                                dict_benchmark = {},
-                               reorder = False):
+                               reorder = False,
+                               det_tool=False):
     reptree = g_tree.reptree
     cz_nodes = g_tree.cz_nodes
     ### Tree
@@ -555,7 +556,15 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
             add_face_to_node(seq_face, node, column=1, position='aligned')
 
         ## Nodes style
-        if node.T == "True" and not int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
+        if det_tool and node.T == "True":
+            node.set_style(nstyle_T_sim)
+            add_t(node)
+        elif det_tool and node.C == "True":
+            node.set_style(nstyle_C_sim)
+        elif det_tool:
+            node.set_style(nstyle)
+        #if not det_tool no background
+        elif node.T == "True" and not int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
             node.set_style(nstyle_T_sim)
             add_t(node)
         elif node.T == "True" and int(node.ND) in g_tree.conv_events.nodesWithTransitions_est:
@@ -576,7 +585,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
         else:
             node.set_style(nstyle)
         
-        if int(node.ND) == sim_root_ND:
+        if int(node.ND) == sim_root_ND and not det_tool:
             add_sim_root(node)
 
     phylotree_style.layout_fn = my_layout
