@@ -1,6 +1,8 @@
 test:
+	mkdir -p test
 	bash etc/test.sh
 test_det:
+	mkdir -p test_det
 	bash etc/test_det.sh
 clean_test:
 	rm -r test

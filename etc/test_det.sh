@@ -12,7 +12,7 @@ mkdir -p example
 cd example
 
 ## Get the data
-rm -r data || ls data
+rm -r data || echo ""
 mkdir -p data
 ### tree
 wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/phylogeny.nwk -P data/
