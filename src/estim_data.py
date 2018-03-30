@@ -345,8 +345,15 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
     
     return res, bilan
 
-def dico_typechg_het_det(N,repest,repseq,ali_filename, n_sites, tree="", NbCat_Est = 10, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
+def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
+    
+    tree = os.path.basename(g_tree.init_tree_fn)
+    
+    N = g_tree.n_events
+    repest = g_tree.repest
+    repseq = g_tree.repseq
+    n_sites = g_tree.n_sites
 
     lsites = range(n_sites)
 

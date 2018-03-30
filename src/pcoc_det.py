@@ -206,7 +206,6 @@ repbppconfig = OutDirName +  "bpp_config"
 if not os.path.exists(repbppconfig):
     os.mkdir(repbppconfig)
 
-
 bpp_lib.write_config(repbppconfig, estim=True)
 
 #http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
@@ -331,62 +330,19 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     logger.debug("Tree: %s", os.path.basename(tree_filename))
     metadata_simu_dico["tree"] = os.path.basename(tree_filename)
 
-    # Annotate tree
-    tree = events_placing.init_tree(tree_filename)
-    annotated_tree, nodesWithTransitions, observedNumTransitions = events_placing.manualTransitions_new(manual_mode_nodes, tree)
+    g_tree = events_placing.gene_tree(tree_filename, manual_mode_nodes)
+    g_tree.init_tree_det(n_sites)
 
+    metadata_simu_dico["numberOfLeaves"] = g_tree.numberOfLeafs
 
-    nodesWithTransitions = [k.ND for k in annotated_tree.search_nodes(T=1)]
-    nodesWithConvergentModel = [k.ND for k in annotated_tree.search_nodes(C=1, T=0)]
-    nodesWithAncestralModel =  [k.ND for k in annotated_tree.search_nodes(T=0,C=0)]
+    g_tree.init_inter_dir_det(repest0, reptree0, repfasta0, repbppconfig, repseq)
 
-    logger.debug("tree: %s", annotated_tree.get_ascii(attributes=["ND","name","C","T"]))
-
-    n_events = len(nodesWithTransitions)
-
-    nodesWithAncestralModel.sort()
-    nodesWithConvergentModel.sort()
-    nodesWithTransitions.sort()
-
-    if nodesWithAncestralModel:
-    #### remove root
-        root_ND = annotated_tree.get_tree_root().ND
-        if root_ND in nodesWithTransitions:
-            nodesWithTransitions.remove(root_ND)
-        else:
-            nodesWithAncestralModel.remove(root_ND)
-
-    numberOfNodes = len(annotated_tree.get_descendants())
-    numberOfLeafs = len(annotated_tree.get_leaves())
-
-
-
-    logger.debug("nodesWithAncestralModel: %s", nodesWithAncestralModel)
-    logger.debug("nodesWithConvergentModel: %s", nodesWithConvergentModel)
-    logger.debug("nodesWithTransitions: %s", nodesWithTransitions)
-    logger.debug("numberOfNodes: %s", numberOfNodes)
-    logger.debug("len: %s tot : %s ", len(nodesWithTransitions+nodesWithConvergentModel+nodesWithAncestralModel),numberOfNodes)
-
-    if len(nodesWithTransitions+nodesWithConvergentModel+nodesWithAncestralModel) != numberOfNodes:
-        logger.debug("annotated_tree: %s", annotated_tree.get_ascii(attributes=["T","C"]))
-        sys.exit(1)
-
-    metadata_simu_dico["numberOfLeafs"] = numberOfLeafs
-
-    repest=repest0.replace("//","/")
-    reptree=reptree0.replace("//","/")
-    repfasta=repfasta0.replace("//","/")
-
-    if not os.path.exists(repest) and not os.path.exists(reptree):
-        os.mkdir(repest)
-        os.mkdir(reptree)
-
-    logger.debug("repest: %s", repest)
-    logger.debug("reptree: %s", reptree)
-    logger.debug("repseq: %s", repseq)
+    logger.debug("repfasta: %s", g_tree.repfasta)
+    logger.debug("repest: %s", g_tree.repest)
+    logger.debug("reptree: %s", g_tree.reptree)
 
     ### construit les arbres d'etude :
-    (tree_annotated, tree_conv_annotated,  allbranchlength, convbranchlength) = events_placing.mk_tree_4_simu_new(annotated_tree, reptree, nodesWithConvergentModel, nodesWithTransitions, plot=args.plot)
+    (allbranchlength, convbranchlength) = g_tree.mk_tree_for_simu(plot=args.plot)
 
     metadata_simu_dico["allbranchlength"] = allbranchlength
     metadata_simu_dico["convbranchlength"] = convbranchlength
@@ -396,8 +352,8 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     l_TPFPFNTN_topo = []
     l_TPFPFNTN_obs_sub = []
 
-    if not os.path.isfile(repseq + "/" + ali_basename):
-        logger.error("%s does not exist", repseq + "/" + ali_basename)
+    if not os.path.isfile(g_tree.repseq + "/" + ali_basename):
+        logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
         sys.exit(1)
 
     c1 = 1  # useless but compatibility
@@ -409,14 +365,15 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             set_e1e2.append((e1,e2))
     for (e1,e2) in set_e1e2:
         logger.debug ("Estime e1: %s e2: %s", e1, e2)
-        tree_fn = reptree + "/tree.nhx"
         # Positif
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-        bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+#$      bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+        bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+#$      bpp_lib.make_estim(ali_basename, nodesWithAncestralModel, nodesWithTransitions, nodesWithConvergentModel, e1, e2, repseq, tree_fn, repest, repbppconfig, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+        bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
 
 
     ### post proba
-    res, bilan = estim_data.dico_typechg_het_det(n_events,repest,repseq,ali_basename,  n_sites,tree = os.path.basename(tree_filename), set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
+    res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
     l_TPFPFNTN_mod_het.extend(res)
 
     for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
@@ -491,7 +448,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         for seq in ali:
             new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
             filtered_ali.append(new_seq)
-        SeqIO.write(filtered_ali, repfasta+"/filtered_ali."+model+".faa", "fasta")
+        SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
         if model == "union":
             modelstr = "union"
         else:
@@ -510,12 +467,13 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
     df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
 
+
     ### Plot
     if args.plot:
         if args.plot_complete_ali:
-            plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(reptree, repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_values_pcoc=dict_values_pcoc, hp=positions_to_highlight)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight)
 
 
         for model in ["PCOC", "PC", "OC"]:
@@ -523,9 +481,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 dict_values_pcoc_filtered_model = {}
                 for (key, val) in dict_values_pcoc.items():
                     dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
                 if args.svg:
-                     plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
+                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder)
 
         # all model
         if dict_pos_filtered["union"]:
@@ -533,27 +491,26 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             dict_values_pcoc_filtered_model = {}
             for (key, val) in dict_values_pcoc.items():
                 dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-            plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
+            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(reptree, repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_values_pcoc = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False)
 
 
     if not args.no_cleanup:
-        remove_folder(repest)
-        remove_folder(repbppconfig)
-        remove_folder(reptree)
+        remove_folder(g_tree.repest)
+        remove_folder(g_tree.repbppconfig)
+        remove_folder(g_tree.reptree)
         if not args.no_cleanup_fasta:
-            remove_folder(repfasta)
+            remove_folder(g_tree.repfasta)
 
     metadata_simu_dico["time"] = str(time.time() - start_detec)
 
-    return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, nodesWithTransitions
+    return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, g_tree.conv_events.nodesWithTransitions
 
-
-num_tree = 1
-metadata_tree_dico = {}
 
 if __name__ == "__main__":
+    num_tree = 1
+    metadata_tree_dico = {}
     start_tree_time = time.time()
     #logger.info("START: %s", os.path.basename(tree_filename))
     repseq = os.path.dirname(ali_filename)

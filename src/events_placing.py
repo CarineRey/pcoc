@@ -97,6 +97,73 @@ class gene_tree(object):
         self.init_tree = init_tree(self.init_tree_fn)
         self.numberOfLeafs = len(self.init_tree.get_tree_root().get_leaves()) + 1
 
+    def init_tree_det(self,n_sites):
+        self.flg = 1
+        self.bl_new = None
+
+        self.n_sites = n_sites
+
+        self.init_tree = init_tree(self.init_tree_fn)
+        self.numberOfLeafs = len(self.init_tree.get_tree_root().get_leaves()) + 1
+
+        self.annotated_tree, nodesWithTransitions, observedNumTransitions = manualTransitions_new(self.manual_mode_nodes, self.init_tree)
+
+
+        nodesWithTransitions     = [k.ND for k in self.annotated_tree.search_nodes(T=1)]
+        nodesWithConvergentModel = [k.ND for k in self.annotated_tree.search_nodes(C=1, T=0)]
+        nodesWithAncestralModel  = [k.ND for k in self.annotated_tree.search_nodes(T=0,C=0)]
+
+        nodesWithAncestralModel.sort()
+        nodesWithConvergentModel.sort()
+        nodesWithTransitions.sort()
+
+        self.n_events = len(nodesWithTransitions)
+
+        if nodesWithAncestralModel:
+        #### remove root
+            root_ND = self.annotated_tree.get_tree_root().ND
+            if root_ND in nodesWithTransitions:
+                nodesWithTransitions.remove(root_ND)
+            else:
+                nodesWithAncestralModel.remove(root_ND)
+
+        numberOfNodes = len(self.annotated_tree.get_descendants())
+        numberOfLeafs = len(self.annotated_tree.get_leaves())
+
+
+        numberOfLeafsWithTransitions = 0
+        for n_ND in nodesWithConvergentModel:
+                node = self.annotated_tree.search_nodes(ND=n_ND)[0]
+                if node.is_leaf():
+                    numberOfLeafsWithTransitions += 1
+
+        self.conv_events = conv_events(nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, nodesWithTransitions, numberOfLeafsWithTransitions, numberOfLeafs)
+
+        self.outgroup_ND = self.annotated_tree.get_tree_root().ND
+
+        logger.debug("tree: %s", self.annotated_tree.get_ascii(attributes=["ND","name","C","T"]))
+
+        if self.conv_events.get_number_nodes_est() != numberOfNodes:
+            logger.error("annotated_tree: %s", annotated_tree.get_ascii(attributes=["T","C"]))
+            sys.exit(1)
+
+
+
+    def init_inter_dir_det(self, repest0, reptree0, repfasta0, repbppconfig, repseq):
+        repest=repest0.replace("//","/")
+        reptree=reptree0.replace("//","/")
+        repfasta=repfasta0.replace("//","/")
+
+        if not os.path.exists(repest) and not os.path.exists(reptree):
+            os.mkdir(repest)
+            os.mkdir(reptree)
+
+        self.repfasta              = repfasta
+        self.repest                = repest
+        self.repseq                = repseq
+        self.reptree               = reptree
+        self.repbppconfig          = repbppconfig
+
     def init_inter_dir(self,name0, repseq0, repest0, reptree0, repplottreeali0, replikelihoodsummary0, repbppconfig, plot_ali, get_likelihood_summaries):
         repseq="%s/%s"%(repseq0,name0)
         repseq=repseq.replace("//","/")
@@ -142,7 +209,7 @@ class gene_tree(object):
 
         self.annotated_tree, self.conv_events = placeNTransitionsInTree(n_events, maxTrans, maxConvRate, self.init_tree, manual_mode_nodes = self.manual_mode_nodes, nf=self.init_tree_fn)
         self.numberOfNodes = len(self.annotated_tree.get_descendants())
-        
+
         self.outgroup_ND = self.annotated_tree.get_tree_root().ND
 
 
@@ -245,14 +312,14 @@ class gene_tree(object):
 
         self.tree_fn_est     = self.reptree + "/noisy_tree.nhx"
         self.treeconv_fn_est = self.reptree + "/noisy_tree_conv.nhx"
-        
+
         return (mean_err, sd_err, median_err)
 
     def add_noise_in_root_tree_est(self, root_noise, topo_met):
         vnodes=self.conv_events.get_nodes_est_TorC()
 
         noisy_tree = self.annotated_tree.copy(method="deepcopy")
-        logger.info("sim root %s",self.outgroup_ND)
+        logger.debug("sim root %s",self.outgroup_ND)
 
 
         root_children = noisy_tree.get_tree_root().children
@@ -271,10 +338,10 @@ class gene_tree(object):
             self.outgroup_ND = root_children[0].ND
 
         noisy_tree.set_outgroup(new_outgroup)
-        
-        
-        
-        logger.info("det root %s",self.outgroup_ND)
+
+
+
+        logger.debug("det root %s",self.outgroup_ND)
 
         new_nodesWithTransitions_est = []
         new_nodesWithConvergentModel_est = []
@@ -287,7 +354,7 @@ class gene_tree(object):
             noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_root_tree_conv.nhx"%(self.reptree), format_root_node=True)
 
         noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_root_tree.nhx"%(self.reptree), format_root_node=True)
-        
+
         if self.cz_nodes:
             noisy_tree.write(format=1, features=["ND","T","C","Cz"],outfile="%s/annotated_tree_est.nhx"%(self.reptree),format_root_node=True)
         else:
@@ -701,7 +768,7 @@ def noise_bl(tree, reptree, vnodes=None, topo_met=False, cz_nodes= {} ):
     else:
         noisy_tconv = build_conv_topo(noisy_tree, vnodes)
         noisy_tconv.write(format=1, features=["ND"],outfile="%s/noisy_tree_conv.nhx"%(reptree), format_root_node=True)
-    
+
 
     noisy_tree.write(format=1, features=["ND"],outfile="%s/noisy_tree.nhx"%(reptree), format_root_node=True)
     return (bl_before, bl_err, bl_after)

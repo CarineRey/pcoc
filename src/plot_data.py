@@ -532,8 +532,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
             col_i +=1
     
     sim_root_ND = g_tree.outgroup_ND
-    print(sim_root_ND)
-    
+
     def my_layout(node):
         ## Sequence name
         F = TextFace(node.name, tight_text=True)
