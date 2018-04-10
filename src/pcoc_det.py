@@ -219,6 +219,23 @@ l_n_sites = []
 
 if os.path.isfile(ali_filename):
     ali = AlignIO.read(ali_filename, "fasta")
+    #check alphabet
+    alphabet = {}
+    error = {}
+    n_tot=0
+    for seq in ali:
+        for letter in seq.seq:
+            n_tot+=1
+            if letter in ["-","X","A","C","D","E","F","G","H","I","K","L","M","N","P","Q","R","S","T","V","W","Y"]:
+                alphabet.setdefault(letter,0)
+                alphabet[letter]+=1
+            else:
+                error.setdefault(letter,0)
+                error[letter]+=1
+    logger.info("Alphabet usage:\n%s ", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  alphabet.items()]))
+    if error:
+        logger.error("Invalid character in the alignment: %s", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  error.items()]))
+        sys.exit(1)
 else:
     logger.error("%s does not exist", ali_filename)
     sys.exit(1)
