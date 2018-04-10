@@ -518,8 +518,6 @@ def mk_tree_4_simu(g_tree, topo_met = False, plot = False):
   annotated_tree.write(format=1, features=["ND"],outfile="%s/tree.nhx"%(reptree),format_root_node=True)
 
 
-
-
   if plot:
     cz_nodes_s = {}
     if cz_nodes:
