@@ -96,15 +96,15 @@ def make_simul(name, c1, c2, g_tree, number_of_sites=1000,
         if nodesWithAncestralModel:
             number_of_models +=1
             command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
         if nodesWithTransitions:
             number_of_models +=1
             command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitions)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
         if nodesWithConvergentModel:
             number_of_models +=1
             command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
 
         command+=" param=%s.bpp Ne1=%d Ne2=%d " %(repbppconfig+"/CATseq_sim_conv",c1,c2)
 
@@ -112,7 +112,7 @@ def make_simul(name, c1, c2, g_tree, number_of_sites=1000,
         allNodes = nodesWithConvergentModel+nodesWithTransitions+nodesWithAncestralModel
         number_of_models +=1
         command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
-        command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, allNodes)))
+        command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, allNodes)))
         command+=" param=%s.bpp Ne1=%d " %(repbppconfig+"/CATseq_sim_noconv", c1)
 
 
@@ -125,15 +125,15 @@ def make_simul(name, c1, c2, g_tree, number_of_sites=1000,
                     number_of_models +=1
                     sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
                     t_node = nodes[0]
-                    sup_command+=" model%s.nodes_id=\"%s\" " %(number_of_models,str(t_node))
+                    sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,str(t_node))
                     if len(nodes) > 1:
                         number_of_models +=1
                         sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                        sup_command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str,nodes[1:])))
+                        sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str,nodes[1:])))
                 else:
                     number_of_models +=1
                     sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                    sup_command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodes)))
+                    sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodes)))
 
     command+=sup_command + " nonhomogeneous.number_of_models=%s " %(number_of_models)
     out = commands.getoutput(command)
@@ -172,37 +172,37 @@ def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
     if not os.path.isfile(fasta_file):
         logger.error("%s is not a file", fasta_file)
 
-    command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s \"input.sequence.file=%s\" NBCAT=%s " %(repbppconfig+"/CATseq_estim.bpp", name, suffix, repseq, tree_fn, repest, fasta_file, NBCATest)
+    command = "bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s \'input.sequence.file=%s\' NBCAT=%s " %(repbppconfig+"/CATseq_estim.bpp", name, suffix, repseq, tree_fn, repest, fasta_file, NBCATest)
     number_of_models = 0
 
     if nodesWithAncestralModel:
         number_of_models +=1
         command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c1)
-        command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+        command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
 
     if OneChange:
         if nodesWithTransitions:
             number_of_models +=1
             command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitions)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
 
         if nodesWithConvergentModel:
             number_of_models +=1
             command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
     else:
         nodesWithTransitionsAndWithConvergentModel = nodesWithTransitions+nodesWithConvergentModel
         if nodesWithTransitionsAndWithConvergentModel:
             number_of_models +=1
             command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, c2)
-            command+=" model%s.nodes_id=\"%s\" " %(number_of_models,",".join(map(str, nodesWithTransitionsAndWithConvergentModel)))
+            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitionsAndWithConvergentModel)))
 
     if gamma:
-        command+=" rate_distribution=\"Gamma(n=4)\" "
+        command+=" rate_distribution=\'Gamma(n=4)\' "
     elif inv_gamma:
-        command+=" rate_distribution=\"Invariant(dist=Gamma(n=4))\" "
+        command+=" rate_distribution=\'Invariant(dist=Gamma(n=4))\' "
     else:
-        command+=" rate_distribution=\"Constant()\" "
+        command+=" rate_distribution=\'Constant()\' "
 
     if 0 <= max_gap_allowed <=100:
         command+=" MAX_GAP_ALLOWED=%s " %(max_gap_allowed)
@@ -244,14 +244,14 @@ def make_estim_conv(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max
         logger.error("%s is not a file", fasta_file)
 
 
-    n1="\""+ ",".join(map(str, allNodes))+"\""
+    n1="\'"+ ",".join(map(str, allNodes))+"\'"
 
-    command="bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \"input.sequence.file=%s\" "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, tree_fn, repest, n1, c1, NBCATest, fasta_file)
+    command="bppml param=%s NAME=%s SUFFIX=%s REP_SEQ=%s TREE=%s REP_EST=%s mod1Nodes=%s Ne1=%d  NBCAT=%s  \'input.sequence.file=%s\' "%(repbppconfig + "/CATseq_conv.bpp", name, suffix, repseq, tree_fn, repest, n1, c1, NBCATest, fasta_file)
 
     if gamma:
-        command+=" rate_distribution=\"Gamma(n=4)\" "
+        command+=" rate_distribution=\'Gamma(n=4)\' "
     else:
-        command+=" rate_distribution=\"Constant()\" "
+        command+=" rate_distribution=\'Constant()\' "
 
     if 0 <= max_gap_allowed <=100:
         command+=" MAX_GAP_ALLOWED=%s " %(max_gap_allowed)
