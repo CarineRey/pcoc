@@ -278,7 +278,7 @@ In our example, if we take a threshold equal to 0.99, you should found something
 * TPR = 0.9976
 * FPR = 0.0004
 
-Then, to get the expected number of FP in your dataset (FP_ali), you have to calculate the expected number of positives and negatives sites (P_ali and F_ali).
+Then, to get the expected number of FP in your dataset (FP_ali), you have to calculate the expected number of positive and negative sites (P_ali and F_ali).
 If you take, as in the PCOC paper, a proportion of 2% of convergent sites in your data, you will have in this exemple:
 
 * P_ali = 0.02 x n_sites_dataset = 0.02 x 458 = 9
