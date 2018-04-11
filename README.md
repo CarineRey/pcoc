@@ -267,7 +267,7 @@ Indeed:
 * Sensitivity = TPR = mean(TP_simulations) / n_sites_simulations
 * 1 - Specificity = FPR = mean(FP_simulations) / n_sites_simulations
 
-In our example, if we take a threshold equal to 0.99, you should found somethink like :
+In our example, if we take a threshold equal to 0.99, you should found something like :
 
  * TPR = 0.9976
  * FPR = 0.0004
@@ -288,7 +288,7 @@ And so:
 * TP_ali = Sensitivity * P_ali = 9 * 0.9976 = 8.98
 * FP_ali = FPR * N_ali = 449 * 0.0004 = 0.18
 
-Finally,  you shoukd find a very low False Discovery Rate (FDR):
+Finally,  you should find a very low False Discovery Rate (FDR):
 
 * FDR_ali = FP_ali / (TP_ali + FP_ali) = 0.02
 ___
