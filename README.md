@@ -254,37 +254,37 @@ $CMD_PCOC_DOCKER pcoc_sim.py -t  tree_dir/ -o  output_pcoc_det_sim -m $scenario 
 ```
 *(For more details about pcoc_sim.py options see the next section.)*
 
-In brief, for 10 random couple of profiles (`-nb_sampled_couple 10 `), pcoc_sim.py will simulate two alignements of 100 sites (`-n_sites 100`):
+In brief, for 10 random couple of profiles (`-nb_sampled_couple 10 `), pcoc_sim.py will simulate two alignments of 100 sites (`-n_sites 100`):
 
-* one with convergent evolution to get the TPR of convergent site detection
-* another alignement without convergent evolution to get the FPR.
+* one with convergent evolution to get the TPR of convergent site detection,
+* another alignement without convergent evolution to get the FPR
 
 and then used them to detect convergent evolution.
 
 For each couple of ancestral and convergent profiles, the convergent evolution scenario will contain the 5 convergent transition (`-c 5`) defined in `$scenario`.
 
-*We can add `--ident` or `--topo` to test the Topological and Identical methods (see **PCOC** paper for more details).*
+*You can add `--ident` or `--topo` to test the Topological and Identical methods (see **PCOC** paper for more details).*
 
-In the output directory, you fill find a tabular file `Tree_1/BenchmarkResults.tsv`, which contains the number of FP,TP,FN,TN for each used method, for each couple of profiles and for different thresholds.
+In the output directory, you fill find a tabular file `Tree_1/BenchmarkResults.tsv`, which contains the number of FP and TP for each used method, for each couple of profiles and for different thresholds.
 You have just to mean all the lines for a given method and a given threshold to get your TPR and FPR.
 
-Indeed:
+For example, we have:
 
 * Sensitivity = TPR = mean(TP_simulations) / n_sites_simulations
 * 1 - Specificity = FPR = mean(FP_simulations) / n_sites_simulations
 
-In our example, if we take a threshold equal to 0.99, you should found something like :
+In our example, if we take a threshold equal to 0.99 and as we used n_sites_simulations=100, you should found something like :
 
 * TPR = 0.9976
 * FPR = 0.0004
 
 Then, to get the expected number of FP in your dataset (FP_ali), you have to calculate the expected number of positive and negative sites (P_ali and F_ali).
-If you take, as in the PCOC paper, a proportion of 2% of convergent sites in your data, you will have in this exemple:
+If you take, as in the PCOC paper, an expectd proportion of 2% of convergent sites in your data, you will have:
 
 * P_ali = 0.02 x n_sites_dataset = 0.02 x 458 = 9
 * N_ali = 0.98 x n_sites_dataset = 0.98 x 458 = 449
 
-And so:
+And so, you will have:
 
 * TP_ali = Sensitivity * P_ali = 9 * 0.9976 = 8.98
 * FP_ali = FPR * N_ali = 449 * 0.0004 = 0.18
