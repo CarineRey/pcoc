@@ -30,7 +30,7 @@
          * [A. Prepare tree for detection analysis: set putative convergent leaves/nodes](#a-prepare-tree-for-detection-analysis-set-putative-convergent-leavesnodes)
          * [B. Run detection analysis](#b-run-detection-analysis)
       * [4. Output files](#4-output-files)
-      * [5. Using simulation to calculate the staistical power of PCOC on your dataset](#5-using-simulation-to-calculate-the-staistical-power-of-pcoc-on-your-dataset)
+      * [5. Using simulation to calculate the statistical power of PCOC on your dataset](#5-using-simulation-to-calculate-the-statistical-power-of-pcoc-on-your-dataset)
    * [II. Using <strong>PCOC</strong> to simulate a dataset and compare methods for detecting convergent evolution on it](#ii-using-pcoc-to-simulate-a-dataset-and-compare-methods-for-detecting-convergent-evolution-on-it)
       * [1. Usage](#1-usage)
          * [A. Define the convergent scenarios](#a-define-the-convergent-scenarios)
@@ -236,7 +236,7 @@ You will find:
     ```
     The sites with a `*` in the image output correspond to the candidate sites (set with `-ph`).
 
-## 5. Using simulation to calculate the staistical power of PCOC on your dataset
+## 5. Using simulation to calculate the statistical power of PCOC on your dataset
 
 Once you got the candidate convergent site for your gene, you may want to known the sensitivity (True Positive Rate; TPR) and the specificity or maybe the opposite, the False Positive Rate (FPR) of PCOC in your own dataset.
 
