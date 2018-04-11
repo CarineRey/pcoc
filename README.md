@@ -238,10 +238,16 @@ You will find:
 
 ## 5. Using simulation to calculate the statistical power of PCOC on your dataset
 
-Once you got the candidate convergent site for your gene, you may want to known the sensitivity (True Positive Rate; TPR) and the specificity or maybe the opposite, the False Positive Rate (FPR) of PCOC in your own dataset.
+Once you got the candidate convergent sites for your gene, you may want
+to known the sensitivity (True Positive Rate; TPR) and the specificity
+or maybe the opposite, the False Positive Rate (FPR) of PCOC in your own
+dataset.
 
-For that, you can use the **PCOC** simulation and benchmark part using the same tree and same parameters that were used for detection.
-It will perform simulations of a large number of sites with convergent evolution, and of sites without convergent evolution and provide the amount of true positives and false negatives.
+For that, you can use the **PCOC** simulation and benchmark part using
+the same tree and same parameters that were used for detection.
+It will perform simulations of a large number of sites with convergent
+evolution, and of sites without convergent evolution and provide the
+amount of true positives and false negatives.
 
 ```{sh}
 $CMD_PCOC_DOCKER pcoc_sim.py -t  tree_dir/ -o  output_pcoc_det_sim -m $scenario -c 5  -n_sc 1 --pcoc -nb_sampled_couple 10 -n_sites 100
