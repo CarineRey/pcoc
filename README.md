@@ -16,6 +16,8 @@
 
         * you want to start a project on convergence and you wonder how many samples are necessary to have sufficient power to detect convergent sites. With the **PCOC** *simulation* pipeline, you can simulate if detection of convergence is possible with a dataset of a given size.
 
+        * you want to test the statistical power of **PCOC** on your dataset.
+
         * you want to test the underlying model of **PCOC** and compare it to other algorithms used to detect convergence
 
 
