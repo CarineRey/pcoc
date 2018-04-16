@@ -259,16 +259,17 @@ $CMD_PCOC_DOCKER pcoc_sim.py -t  tree_dir/ -o  output_pcoc_det_sim -m $scenario 
 In brief, for 10 random couple of profiles (`-nb_sampled_couple 10 `), pcoc_sim.py will simulate two alignments of 100 sites (`-n_sites 100`):
 
 * one with convergent evolution to get the TPR of convergent site detection,
-* another alignement without convergent evolution to get the FPR
+* another alignement without convergent evolution to get the FPR.
 
-and then used them to detect convergent evolution.
+Then, pcoc_sim.py will detect convergent evolution in both alignments.
 
-For each couple of ancestral and convergent profiles, the convergent evolution scenario will contain the 5 convergent transition (`-c 5`) defined in `$scenario`.
+For each couple of ancestral and convergent profiles, the convergent evolution scenario will contain the 5 convergent transitions (`-c 5`) defined in `$scenario`.
 
 *You can add `--ident` or `--topo` to test the Topological and Identical methods (see **PCOC** paper for more details).*
 
-In the output directory, you fill find a tabular file `Tree_1/BenchmarkResults.tsv`, which contains the number of FP and TP for each used method, for each couple of profiles and for different thresholds.
-You have just to mean all the lines for a given method and a given threshold to get your TPR and FPR.
+In the output directory, you fill find a tabular file `Tree_1/BenchmarkResults.tsv`, which contains the number of FP and TP for each method used, for each couple of profiles and for different thresholds.
+
+You have just to average all the lines for a given method and a given threshold to get your TPR and FPR.
 
 For example, we have:
 
