@@ -283,10 +283,12 @@ In our example, if we take a threshold equal to 0.99 and as we used n_sites_simu
 
 Then, to get the expected number of FP in your dataset (FP_ali), you have to calculate the expected number of positive and negative sites (P_ali and F_ali).
 If you take, as in the PCOC paper, an expectd proportion of 2% of convergent sites in your data, you will have:
-*This figure (2%) is extracted from the paper of Thomas and Hahn (2015) where they found 140 truly convergent sites among 6000 sites.*
 
 * P_ali = 0.02 x n_sites_dataset = 0.02 x 458 = 9
 * N_ali = 0.98 x n_sites_dataset = 0.98 x 458 = 449
+
+*This figure (2%) is extracted from the paper of Thomas and Hahn (2015) where they found 140 truly convergent sites among 6000 sites.*
+
 
 And so, you will have:
 
