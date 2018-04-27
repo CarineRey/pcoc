@@ -270,6 +270,23 @@ if not (t and branch_lengths):
 
 logger.info("tree ok after checking")
 
+
+leaves_names = [ l.name for l in t.get_leaves()]
+seq_names = [ s.name for s in ali]
+logger.debug("leaves names: %s",leaves_names )
+logger.debug("sequences names: %s",seq_names )
+
+if set(leaves_names) != set(seq_names):
+    logger.error("Leaves and sequences are not identical")
+    logger.info("leaves names: %s",",".join(sorted(leaves_names)))
+    logger.info("sequences names: %s",", ".join(sorted(seq_names)))
+    sys.exit(1)
+elif len(leaves_names) != len(seq_names):
+    logger.error("There are not the same number of leaves and sequences")
+    sys.exit(1)
+else:
+    logger.info("sequences and leaves names ok after checking")
+
 manual_mode_nodes = {}
 if args.manual_mode:
     manual_mode_nodes = {"T":[],"C":[]}
