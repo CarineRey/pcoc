@@ -72,6 +72,8 @@ def read_info_exception(f, n_sites, O, NorP, C1C1_C1C2):
                 pass
             else:
                 logger.error("Pb in read_info(%s)", f)
+                if not os.path.exists(f):
+                    logger.error("%s does not exist", f)
                 #logger.warning("f: %s, O: %s, NorP: %s, C1C1_C1C2: %s", f, O, NorP, C1C1_C1C2)
     #logger.debug("O: %s, k: %s, NorP: %s, res: %s", O, NorP, C1C1_C1C2, res)
     return res

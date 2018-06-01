@@ -22,6 +22,7 @@
 #import subprocess
 import commands
 import os
+import sys
 
 import logging
 logger = logging.getLogger("pcoc.bpp_lib")
@@ -219,11 +220,16 @@ def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
     if debug_mode_bpp:
         logger.debug("%s\n%s", out, command)
 
+    info_filename = "%s/%s_%s_%s%s.infos" %(repest, name , c1, c2, suffix)
     if "Number of sites retained...............: 0" in out:
-        info_filename = "%s/%s_%s_%s%s.infos" %(repest, name , c1, c2, suffix)
         logger.warning("No site retained for %s", info_filename)
         f_infos = open(info_filename,"w")
         f_infos.close()
+
+    if not os.path.exists(info_filename):
+        logger.error("%s does not exist", info_filename)
+        logger.error("command: %s\nout:\n%s", command, out)
+        sys.exit(42)
 
 def make_estim_conv(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max_gap_allowed=90):
 
