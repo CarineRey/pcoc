@@ -505,7 +505,8 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
                                x_values=[], hp = [],
                                dict_benchmark = {},
                                reorder = False,
-                               det_tool=False):
+                               det_tool=False,
+                               title=""):
     reptree = g_tree.reptree
     cz_nodes = g_tree.cz_nodes
     ### Tree
@@ -653,6 +654,8 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
 
     phylotree_style.aligned_header.add_face(sequencescorebox, 1)
 
+    if title:
+        phylotree_style.title.add_face(TextFace(title), column=0)
 
     tree_nf = reptree + "/annotated_tree.nhx"
     logger.debug("tree_nf: %s",tree_nf)

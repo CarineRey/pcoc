@@ -39,12 +39,12 @@ docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_
 ## With the --reorder option:
 docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
 ## Without the --reorder option:
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
 ## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder -plot_title "Test PCOC"
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma -plot_title "Test PCOC"
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma -plot_title "Test PCOC"
 
 
 ## another example with several convergent branches, with OC applied on branches 11, 6, and 15, and PC applied on all of 11,9,10,6,15:
-docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot
+docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC"

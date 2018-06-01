@@ -97,6 +97,9 @@ BasicOptions.add_argument('--plot', action="store_true",
 BasicOptions.add_argument('--plot_complete_ali', action="store_true",
                     help="Plot the tree and each site of alignment with its corresponding score. (Can take time to be openned)",
                     default=False)
+BasicOptions.add_argument('-plot_title', type=str,
+                    help="Title of each plot (default: None)",
+                    default="")
 BasicOptions.add_argument('--reorder', action="store_true",
                     help="reorder the filtered plot by score.categories (>= 0.99, >=0.9, >= 0.8, < 0.8)",
                     default=False)
@@ -505,9 +508,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     ### Plot
     if args.plot:
         if args.plot_complete_ali:
-            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight)
+            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
 
 
         for model in ["PCOC", "PC", "OC"]:
@@ -515,9 +518,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 dict_values_pcoc_filtered_model = {}
                 for (key, val) in dict_values_pcoc.items():
                     dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
                 if args.svg:
-                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True)
+                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
 
         # all model
         if dict_pos_filtered["union"]:
@@ -525,9 +528,9 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             dict_values_pcoc_filtered_model = {}
             for (key, val) in dict_values_pcoc.items():
                 dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True)
+            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
             if args.svg:
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
 
 
     if not args.no_cleanup:
