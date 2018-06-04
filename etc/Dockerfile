@@ -37,45 +37,47 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/
 
 # # Install R
 # RUN echo """deb http://cloud.r-project.org/bin/linux/debian stretch-cran34/""" >> /etc/apt/sources.list \
-#     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FCAE2A0E115C3D8A 
+#     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FCAE2A0E115C3D8A
 # RUN apt-get update && apt-get install --no-install-recommends -qy r-base r-base-dev \
 #     && rm -rf /var/lib/apt/lists/* \
 #     && echo 'install.packages(c("ggplot2", "plyr", "reshape2", "readr", "cowplot"), repos="http://cran.us.r-project.org", dependencies=TRUE)' > /tmp/packages.R \
 #     && Rscript /tmp/packages.R
 
 # install bpp:
-WORKDIR $bpp_dir/sources
-
-RUN git clone https://github.com/BioPP/bpp-core && \
-    git clone https://github.com/BioPP/bpp-seq && \
-    git clone https://github.com/BioPP/bpp-popgen && \
-    git clone https://github.com/BioPP/bpp-phyl && \
-    git clone https://github.com/BioPP/bppsuite
-
 WORKDIR $bpp_dir/sources/bpp-core
-RUN cmake  . && \ 
+RUN git clone https://github.com/BioPP/bpp-core . &&\
+    git checkout 405cab5 &&\
+    cmake  . && \
     (make -j 4 || make) && \
     make install
 
 WORKDIR $bpp_dir/sources/bpp-seq
-RUN cmake  . && \ 
+RUN git clone https://github.com/BioPP/bpp-seq . && \
+    git checkout 32d9c67 &&\
+    cmake  . && \
     (make -j 4 || make) && \
     make install
 
 WORKDIR $bpp_dir/sources/bpp-popgen
-RUN cmake  . && \ 
+RUN git clone https://github.com/BioPP/bpp-popgen . &&\
+    git checkout 77d712e &&\
+    cmake  . && \
     (make -j 4 || make) && \
     make install
-    
+
 WORKDIR $bpp_dir/sources/bpp-phyl
-RUN cmake  . && \ 
+RUN git clone  https://github.com/BioPP/bpp-phyl . &&\
+    git checkout  78d0235 &&\
+    cmake  . && \
     (make -j 4 || make)  && \
     make install
 
 WORKDIR $bpp_dir/sources/bppsuite
-RUN cmake  . && \ 
+RUN git clone https://github.com/BioPP/bppsuite . &&\
+    git checkout 77ccc0a &&\
+    cmake  . && \
     (make -j 4 || make) && \
-    make install 
+    make install
 
 
 COPY data/* /data/
