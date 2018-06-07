@@ -137,6 +137,14 @@ class gene_tree(object):
                 if node.is_leaf():
                     numberOfLeafsWithTransitions += 1
 
+        numberOfConvLeafs = 0
+        for n_ND in nodesWithConvergentModel + nodesWithTransitions:
+                node = self.annotated_tree.search_nodes(ND=n_ND)[0]
+                if node.is_leaf():
+                    numberOfConvLeafs += 1
+
+        self.numberOfConvLeafs = numberOfConvLeafs
+
         self.conv_events = conv_events(nodesWithTransitions, nodesWithConvergentModel, nodesWithAncestralModel, nodesWithTransitions, numberOfLeafsWithTransitions, numberOfLeafs)
 
         self.outgroup_ND = self.annotated_tree.get_tree_root().ND

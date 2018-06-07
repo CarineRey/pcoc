@@ -493,16 +493,34 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
 
     ## Output
+    
+    ### Get indel prop
+    prop_indel = [0]*n_sites
+    prop_indel_conv = [0]*n_sites
+    for seq in ali:
+        sp_conv = g_tree.annotated_tree.search_nodes(name=seq.name)[0].C == True
+        for i in range(n_sites):
+            if seq.seq[i] == "-":
+                prop_indel[i] +=1
+                if sp_conv:
+                    prop_indel_conv[i]  +=1
+
     ### Table
     #### complete:
     df_bilan = pd.DataFrame.from_dict(dict_values_pcoc, orient='columns', dtype=None)
-    df_bilan["pos"] = all_pos
+    df_bilan["Sites"] = all_pos
+    df_bilan["Indel_prop"] = prop_indel
+    df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
+    df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
+    df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
+    df_bilan = df_bilan[["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC", "PC","OC"]]
     #### filtered:
-    df_bilan_f = df_bilan[df_bilan.pos.isin(all_filtered_position)]
+    df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
     df_bilan_f = df_bilan_f.copy()
 
     df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
-    df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
+    if not df_bilan_f.empty:
+        df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
 
 
     ### Plot
