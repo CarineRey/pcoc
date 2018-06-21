@@ -66,7 +66,7 @@ requiredOptions.add_argument('-t', "--tree", type=str,
 requiredOptions.add_argument('-aa', "--ali", type=str,
                              help='Input amino-acid aligment filename', required=True)
 requiredOptions.add_argument('-m', '--manual_mode', type=str, metavar="\"x/y,z/...\"",
-                    help="User defined convergent transition/branches. Transition node must be the first number and independent events must be separed by a \"/\". ex: \"1,2,3/67/55,56\" (default: None)",
+                    help="User defined convergent transition/branches. Transition node must be the first number and independent events must be separed by a \"/\". ex: \"1,2,3/67/55,56\" (default: None) OR use \"-\" to precise that the input tree is annotated with the tag Condition and Transition.",
                     required=True)
 requiredOptions.add_argument('-o', '--output_dir', type=str,
                    help="Output directory name", required=True)
@@ -124,8 +124,11 @@ AdvancedOptions.add_argument('--inv_gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
 AdvancedOptions.add_argument('--max_gap_allowed', type=int,
-                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100",
-                    default=30)
+                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100 (default:5%)",
+                    default=5)
+AdvancedOptions.add_argument('--max_gap_allowed_in_conv_leaves', type=int,
+                    help="max gap allowed in convergent leaves to take into account a site (in %%), must be between 0 and 100 (default:5%)",
+                    default=5)
 AdvancedOptions.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
                     default=False)
@@ -253,12 +256,14 @@ nb_seq = len(ali)
 logger.info("tree: %s", args.tree)
 tree_filename = args.tree
 # test if a tree
+
+
 try:
     t=Tree(tree_filename)
-except:
+except Exception as exc:
+    logger.error(str(exc))
+    sys.exit(1)
 
-    logger.error("%s is not a newick tree, this tree can not be used",tree_filename)
-    t=""
 if t:
     treefile=open(tree_filename,"r")
     tree=treefile.read().strip()
@@ -272,7 +277,6 @@ if not (t and branch_lengths):
     sys.exit(1)
 
 logger.info("tree ok after checking")
-
 
 leaves_names = [ l.name for l in t.get_leaves()]
 seq_names = [ s.name for s in ali]
@@ -288,10 +292,53 @@ elif len(leaves_names) != len(seq_names):
     logger.error("There are not the same number of leaves and sequences")
     sys.exit(1)
 else:
-    logger.info("sequences and leaves names ok after checking")
+    logger.info("Sequences and leaves names match.")
 
 manual_mode_nodes = {}
-if args.manual_mode:
+
+if args.manual_mode == "-":
+    manual_mode_nodes = {"T":[],"C":[]}
+    features = []
+    for n in t.traverse("postorder"): # get all features:
+        features.extend(list(set(dir(n)) - set(dir(Tree()))))
+        features = list(set(features)) # list(set(*)) = remove duplicates
+    logger.info("No detected tag" if not features else "Detected tags: "+", ".join([f for f in features]))
+
+    if not "Condition" in features or not "Transition" in features:
+        logger.error("\"Transition\" and \"Condition\" tags are not detected. Use a valid tree are use a manual scenario in the \"-m\" option.")
+        sys.exit(1)
+
+    #number tree
+    nodeId = 0
+    for n in t.traverse("postorder"):
+        n.add_features(ND=nodeId)
+        nodeId = nodeId + 1
+
+    if "Transition" in features:
+        logger.info("\"Transition\" is in detected tags. \"Transition:1\" identifies transition nodes")
+        nodes_T = [n.ND for n in t.search_nodes(Transition="1")]
+        logger.info(nodes_T)
+        manual_mode_nodes["T"].extend(nodes_T)
+    if "Condition" in features:
+        logger.info("\"Condition\" is in detected tags. \"Condition:1\" identifies convergent nodes")
+        logger.info("\"Condition\" is in detected tags. \"Condition:0\" identifies not convergent branches")
+        nodes_C = [n.ND for n in t.search_nodes(Condition="1")]
+        nodes_C = [i for i in nodes_C if i not in nodes_T]
+        logger.info(nodes_C)
+        manual_mode_nodes["C"].extend(nodes_C)
+    # try to build the scenario:
+    p_events = []
+    for ND_T in nodes_T:
+        node_T = t.search_nodes(ND=ND_T)[0]
+        ND_C = [n.ND for n in node_T.search_nodes(Condition="1")]
+        ND_C = [i for i in ND_C if i != ND_T]
+        p_events.append(",".join(map(str,[ND_T]+ND_C)))
+    p_events = "/".join(p_events)
+    logger.info("scenario reconstructed from %s: \"%s\"", os.path.basename(tree_filename), p_events)
+
+
+
+elif args.manual_mode:
     manual_mode_nodes = {"T":[],"C":[]}
     p_events = args.manual_mode.strip().split("/")
     for e in p_events:
@@ -310,6 +357,11 @@ metadata_run_dico["Convergent_branches"] = p_events
 metadata_run_dico["gamma"] = args.gamma
 metadata_run_dico["inv_gamma"] = args.inv_gamma
 metadata_run_dico["max_gap_allowed"] = args.max_gap_allowed
+metadata_run_dico["max_gap_allowed_in_conv_leaves"] = args.max_gap_allowed_in_conv_leaves
+
+if not (0 <= args.max_gap_allowed_in_conv_leaves <= 100):
+    logger.error("max_gap_allowed_in_conv_leaves (%s) must be between 0 and 100", max_gap_allowed_in_conv_leaves)
+    sys.error(1)
 
 if not (0 <= args.max_gap_allowed <= 100):
     logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
@@ -422,14 +474,30 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     dict_values_pcoc["PC"] = bilan[12]["p_mean_X_XY"]
     dict_values_pcoc["OC"] = bilan[12]["p_mean_X_OX"]
 
+    ### Get indel prop
+    prop_indel = [0]*n_sites
+    prop_indel_conv = [0]*n_sites
+    for seq in ali:
+        sp_conv = g_tree.annotated_tree.search_nodes(name=seq.name)[0].C == True
+        for i in range(n_sites):
+            if seq.seq[i] == "-":
+                prop_indel[i] +=1
+                if sp_conv:
+                    prop_indel_conv[i]  +=1
+
+
     # filter position:
 
     bilan_f = {}
     all_pos = range(1, n_sites +1)
 
+    # filter on indel prop:
+    t_indel = args.max_gap_allowed_in_conv_leaves * float(g_tree.numberOfConvLeafs)
+    all_pos_without_indel_sites = [ p for p in all_pos if prop_indel_conv[p-1] < t_indel ]
+
     dict_pos_filtered = {}
     for model in ["PCOC", "PC", "OC"]:
-        dict_pos_filtered[model] = [p for p in all_pos if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
+        dict_pos_filtered[model] = [p for p in all_pos_without_indel_sites if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
         if positions_to_highlight:
             dict_pos_filtered[model].extend(positions_to_highlight)
             dict_pos_filtered[model] = list(set(dict_pos_filtered[model]))
@@ -493,17 +561,6 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
 
     ## Output
-    
-    ### Get indel prop
-    prop_indel = [0]*n_sites
-    prop_indel_conv = [0]*n_sites
-    for seq in ali:
-        sp_conv = g_tree.annotated_tree.search_nodes(name=seq.name)[0].C == True
-        for i in range(n_sites):
-            if seq.seq[i] == "-":
-                prop_indel[i] +=1
-                if sp_conv:
-                    prop_indel_conv[i]  +=1
 
     ### Table
     #### complete:
