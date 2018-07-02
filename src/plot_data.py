@@ -237,7 +237,7 @@ class SequenceScoreFace(StaticItemFace):
         self.type = "item"
         self.item = None
         self.dict_values_pcoc = dict_values_pcoc
-        self.nb_values = len(dict_values_pcoc.values()[1])
+        self.nb_values = len(dict_values_pcoc.values()[0])
         self.col_w = float(col_width)
         self.col_h = float(col_height)
         self.fsize = fsize
@@ -604,7 +604,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
 
     ### X axes:
     if not x_values: # Complete representation
-        x_values_up = [x+1 for x in range(0,len(dict_benchmark.values()[1]))]
+        x_values_up = [x+1 for x in range(0,len(dict_benchmark.values()[0]))]
         inter = 5
     else: # Filtered representation
         x_values_up = x_values
