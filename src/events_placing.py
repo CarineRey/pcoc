@@ -91,6 +91,9 @@ class gene_tree(object):
 
         self.numberOfLeafs = None
 
+        self.auto_trim_tree = []
+        self.reptree = None
+
     def init_tree_sim(self,flg, bl_new):
         self.flg = flg
         self.bl_new = bl_new
@@ -100,8 +103,12 @@ class gene_tree(object):
     def init_tree_det(self,n_sites):
         self.flg = 1
         self.bl_new = None
-
         self.n_sites = n_sites
+
+        if self.auto_trim_tree:
+            self.init_tree_fn, self.manual_mode_nodes = trim_tree(self.init_tree_fn, self.manual_mode_nodes, self.auto_trim_tree, self.reptree)
+
+
 
         self.init_tree = init_tree(self.init_tree_fn)
         self.numberOfLeafs = len(self.init_tree.get_tree_root().get_leaves()) + 1
@@ -889,4 +896,23 @@ def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_in
 
   return tree_final, conv_combi_events
 
+def trim_tree(tree_fn, manual_mode_nodes, sp_present, reptree):
+    trim_t = init_tree(tree_fn)
+    trim_t.prune(sp_present)
+    trim_nodeId =0
+
+    for n in trim_t.traverse("postorder"):
+        n.add_features(TND=trim_nodeId)
+        trim_nodeId = trim_nodeId + 1
+
+    trim_manual_mode_nodes = {"T":[],"C":[]}
+    for k in ["C","T"]:
+        for ND in manual_mode_nodes[k]:
+            TND_l = trim_t.search_nodes(ND=ND)
+            if TND_l:
+                TND = TND_l[0].TND
+                trim_manual_mode_nodes[k].append(TND)
+
+    trim_t.write(format=1,outfile="%s/trim_tree.nw"%(reptree), format_root_node=True)
+    return("%s/trim_tree.nw"%(reptree),trim_manual_mode_nodes)
 
