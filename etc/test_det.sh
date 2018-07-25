@@ -56,3 +56,12 @@ $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_
 
 ## another example with several convergent branches, with OC applied on branches 11, 6, and 15, and PC applied on all of 11,9,10,6,15:
 $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC"
+
+
+## Test with lacking seqs:
+ali=$PWD/data/SLC26A5.fasta
+ali_trim=$PWD/data/SLC26A5_trim.fasta
+
+tail -n 56  $ali > $ali_trim #remove elephant (15)
+$DOCKER_CMD pcoc_det.py -t $tree -aa $ali_trim -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC" --auto_trim_tree
+

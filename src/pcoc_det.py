@@ -114,6 +114,9 @@ BasicOptions.add_argument('--no_cleanup_fasta', action="store_true",
 
 ##############
 AdvancedOptions = parser.add_argument_group('OPTIONS FOR ADVANCED USAGE')
+AdvancedOptions.add_argument('--auto_trim_tree', action="store_true",
+                    help="Remove leaves from the tree not present in the alignment.",
+                    default=False)
 AdvancedOptions.add_argument('-CATX_est', type=int, choices = [10,60],
                     help="Profile categorie to estimate data (10->C10 or 60->C60). (default: 10)",
                     default=10)
@@ -283,16 +286,31 @@ seq_names = [ s.name for s in ali]
 logger.debug("leaves names: %s",leaves_names )
 logger.debug("sequences names: %s",seq_names )
 
-if set(leaves_names) != set(seq_names):
-    logger.error("Leaves and sequences are not identical")
-    logger.info("leaves names: %s",",".join(sorted(leaves_names)))
-    logger.info("sequences names: %s",", ".join(sorted(seq_names)))
+auto_trim_tree = []
+seq_not_in_tree = set(seq_names) - set(leaves_names)
+leaves_not_in_ali = set(leaves_names) - set(seq_names)
+
+if len(set(seq_names)) != len(seq_names):
+    logger.error("There are duplicated sequence names")
     sys.exit(1)
-elif len(leaves_names) != len(seq_names):
-    logger.error("There are not the same number of leaves and sequences")
+if len(set(leaves_names)) != len(leaves_names):
+    logger.error("There are duplicated leaf names")
     sys.exit(1)
+
+if seq_not_in_tree:
+    logger.error("Some sequences do not match with a leaf: %s",",".join(list(seq_not_in_tree)))
+    logger.error("All sequence names must match with a leaf")
+    sys.exit(1)
+elif leaves_not_in_ali and not args.auto_trim_tree:
+    logger.error("Some leaves do not match with a sequence: %s",",".join(list(leaves_not_in_ali)))
+    logger.error('You can use the "--auto_trim_tree" option to automatically remove them from the tree.')
+    sys.exit(1)
+elif leaves_not_in_ali and args.auto_trim_tree:
+    logger.warning("Some leaves do not match with a sequence: %s",",".join(list(leaves_not_in_ali)))
+    logger.warning('You have used the "--auto_trim_tree" option, %s will be remove from the tree.' , list(leaves_not_in_ali) )
+    auto_trim_tree = seq_names
 else:
-    logger.info("Sequences and leaves names match.")
+    logger.info("Sequence and leaf names match.")
 
 manual_mode_nodes = {}
 
@@ -420,190 +438,195 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
     metadata_simu_dico["tree"] = os.path.basename(tree_filename)
 
     g_tree = events_placing.gene_tree(tree_filename, manual_mode_nodes)
+    g_tree.init_inter_dir_det(repest0, reptree0, repfasta0, repbppconfig, repseq)
+    g_tree.auto_trim_tree = auto_trim_tree
     g_tree.init_tree_det(n_sites)
 
     metadata_simu_dico["numberOfLeaves"] = g_tree.numberOfLeafs
 
-    g_tree.init_inter_dir_det(repest0, reptree0, repfasta0, repbppconfig, repseq)
+    if g_tree.manual_mode_nodes["T"] == []:
+        logger.warning("No transition in the tree. End.")
 
-    logger.debug("repfasta: %s", g_tree.repfasta)
-    logger.debug("repest: %s", g_tree.repest)
-    logger.debug("reptree: %s", g_tree.reptree)
+    else:
 
-    ### construit les arbres d'etude :
-    (allbranchlength, convbranchlength) = g_tree.mk_tree_for_simu(plot=args.plot)
+        logger.debug("repfasta: %s", g_tree.repfasta)
+        logger.debug("repest: %s", g_tree.repest)
+        logger.debug("reptree: %s", g_tree.reptree)
 
-    metadata_simu_dico["allbranchlength"] = allbranchlength
-    metadata_simu_dico["convbranchlength"] = convbranchlength
+        ### construit les arbres d'etude :
+        (allbranchlength, convbranchlength) = g_tree.mk_tree_for_simu(plot=args.plot)
 
-
-    l_TPFPFNTN_mod_het = []
-    l_TPFPFNTN_topo = []
-    l_TPFPFNTN_obs_sub = []
-
-    if not os.path.isfile(g_tree.repseq + "/" + ali_basename):
-        logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
-        sys.exit(1)
-
-    c1 = 1  # useless but compatibility
-    c2 = 2  # useless but compatibility
-
-    set_e1e2 = []
-    for e1 in range(1, (NbCat_Est+1)):
-        for e2 in range(1, (NbCat_Est+1)):
-            set_e1e2.append((e1,e2))
-    for (e1,e2) in set_e1e2:
-        logger.debug ("Estime e1: %s e2: %s", e1, e2)
-        # Positif
-        bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-        bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+        metadata_simu_dico["allbranchlength"] = allbranchlength
+        metadata_simu_dico["convbranchlength"] = convbranchlength
 
 
-    ### post proba
-    res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
-    l_TPFPFNTN_mod_het.extend(res)
+        l_TPFPFNTN_mod_het = []
+        l_TPFPFNTN_topo = []
+        l_TPFPFNTN_obs_sub = []
 
-    for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
-        if bilan[12].has_key(p):
-            del bilan[12][p]
+        if not os.path.isfile(g_tree.repseq + "/" + ali_basename):
+            logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
+            sys.exit(1)
 
-    dict_values_pcoc = {}
-    dict_values_pcoc["PCOC"] = bilan[12]["p_mean_X_OXY"]
-    dict_values_pcoc["PC"] = bilan[12]["p_mean_X_XY"]
-    dict_values_pcoc["OC"] = bilan[12]["p_mean_X_OX"]
+        c1 = 1  # useless but compatibility
+        c2 = 2  # useless but compatibility
 
-    ### Get indel prop
-    prop_indel = [0]*n_sites
-    prop_indel_conv = [0]*n_sites
-    for seq in ali:
-        sp_conv = g_tree.annotated_tree.search_nodes(name=seq.name)[0].C == True
-        for i in range(n_sites):
-            if seq.seq[i] == "-":
-                prop_indel[i] +=1
-                if sp_conv:
-                    prop_indel_conv[i]  +=1
+        set_e1e2 = []
+        for e1 in range(1, (NbCat_Est+1)):
+            for e2 in range(1, (NbCat_Est+1)):
+                set_e1e2.append((e1,e2))
+        for (e1,e2) in set_e1e2:
+            logger.debug ("Estime e1: %s e2: %s", e1, e2)
+            # Positif
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
 
 
-    # filter position:
+        ### post proba
+        res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
+        l_TPFPFNTN_mod_het.extend(res)
 
-    bilan_f = {}
-    all_pos = range(1, n_sites +1)
+        for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
+            if bilan[12].has_key(p):
+                del bilan[12][p]
 
-    # filter on indel prop:
-    t_indel = args.max_gap_allowed_in_conv_leaves * float(g_tree.numberOfConvLeafs)
-    all_pos_without_indel_sites = [ p for p in all_pos if prop_indel_conv[p-1] < t_indel ]
+        dict_values_pcoc = {}
+        dict_values_pcoc["PCOC"] = bilan[12]["p_mean_X_OXY"]
+        dict_values_pcoc["PC"] = bilan[12]["p_mean_X_XY"]
+        dict_values_pcoc["OC"] = bilan[12]["p_mean_X_OX"]
 
-    dict_pos_filtered = {}
-    for model in ["PCOC", "PC", "OC"]:
-        dict_pos_filtered[model] = [p for p in all_pos_without_indel_sites if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
-        if positions_to_highlight:
-            dict_pos_filtered[model].extend(positions_to_highlight)
-            dict_pos_filtered[model] = list(set(dict_pos_filtered[model]))
-            dict_pos_filtered[model].sort()
-
-    # filter dict_values_pcoc
-    dict_values_pcoc_filtered = {}
-    all_filtered_position = list(set(events_placing.unlist(dict_pos_filtered.values())))
-    all_filtered_position.sort()
-    dict_pos_filtered["union"] = all_filtered_position
-
-    if args.reorder:
-        for model in ["PCOC", "PC", "OC", "union"]:
-            m_list = [model]
-            if model == "union":
-                m_list = ["PCOC", "PC", "OC"]
-            nb_filtered_pos = len(dict_pos_filtered[model])
-            new_order = [0]*nb_filtered_pos
-            j = 0
-            # 0.99
-            for i in range(nb_filtered_pos):
-                p = dict_pos_filtered[model][i]
-                if any([dict_values_pcoc[m] [p-1] >= 0.99 for m in m_list]):
-                    new_order[i] = j
-                    j+=1
-            # 0.9
-            for i in range(nb_filtered_pos):
-                p = dict_pos_filtered[model][i]
-                if any([0.99 > dict_values_pcoc[m] [p-1] >= 0.9 for m in m_list]) and \
-                   all([0.99 > dict_values_pcoc[m] [p-1] for m in m_list]):
-                    new_order[i] = j
-                    j+=1
-            # 0.8
-            for i in range(nb_filtered_pos):
-                p = dict_pos_filtered[model][i]
-                if any([ 0.9 > dict_values_pcoc[m] [p-1] >= 0.8 for m in m_list]) and \
-                   all([ 0.9 > dict_values_pcoc[m] [p-1] for m in m_list]):
-                    new_order[i] = j
-                    j+=1
-            # other
-            for i in range(nb_filtered_pos):
-                p = dict_pos_filtered[model][i]
-                if all([ dict_values_pcoc[m] [p-1] < 0.8 for m in m_list]):
-                    new_order[i] = j
-                    j+=1
-            dict_pos_filtered[model] = reorder_l(dict_pos_filtered[model], new_order)
-
-
-    # filtered ali:
-    ## Per model
-    for model in ["PCOC", "PC", "OC", "union"]:
-        filtered_ali = []
+        ### Get indel prop
+        prop_indel = [0]*n_sites
+        prop_indel_conv = [0]*n_sites
         for seq in ali:
-            new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
-            filtered_ali.append(new_seq)
-        SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
-        if model == "union":
-            modelstr = "union"
-        else:
-            modelstr = model
-        logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
-
-    ## Output
-
-    ### Table
-    #### complete:
-    df_bilan = pd.DataFrame.from_dict(dict_values_pcoc, orient='columns', dtype=None)
-    df_bilan["Sites"] = all_pos
-    df_bilan["Indel_prop"] = prop_indel
-    df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
-    df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
-    df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
-    df_bilan = df_bilan[["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC", "PC","OC"]]
-    #### filtered:
-    df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
-    df_bilan_f = df_bilan_f.copy()
-
-    df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
-    if not df_bilan_f.empty:
-        df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
+            sp_conv = g_tree.annotated_tree.search_nodes(name=seq.name)[0].C == True
+            for i in range(n_sites):
+                if seq.seq[i] == "-":
+                    prop_indel[i] +=1
+                    if sp_conv:
+                        prop_indel_conv[i]  +=1
 
 
-    ### Plot
-    if args.plot:
-        if args.plot_complete_ali:
-            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
-            if args.svg:
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
+        # filter position:
 
+        bilan_f = {}
+        all_pos = range(1, n_sites +1)
 
+        # filter on indel prop:
+        t_indel = args.max_gap_allowed_in_conv_leaves * float(g_tree.numberOfConvLeafs)
+        all_pos_without_indel_sites = [ p for p in all_pos if prop_indel_conv[p-1] < t_indel ]
+
+        dict_pos_filtered = {}
         for model in ["PCOC", "PC", "OC"]:
-            if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
+            dict_pos_filtered[model] = [p for p in all_pos_without_indel_sites if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
+            if positions_to_highlight:
+                dict_pos_filtered[model].extend(positions_to_highlight)
+                dict_pos_filtered[model] = list(set(dict_pos_filtered[model]))
+                dict_pos_filtered[model].sort()
+
+        # filter dict_values_pcoc
+        dict_values_pcoc_filtered = {}
+        all_filtered_position = list(set(events_placing.unlist(dict_pos_filtered.values())))
+        all_filtered_position.sort()
+        dict_pos_filtered["union"] = all_filtered_position
+
+        if args.reorder:
+            for model in ["PCOC", "PC", "OC", "union"]:
+                m_list = [model]
+                if model == "union":
+                    m_list = ["PCOC", "PC", "OC"]
+                nb_filtered_pos = len(dict_pos_filtered[model])
+                new_order = [0]*nb_filtered_pos
+                j = 0
+                # 0.99
+                for i in range(nb_filtered_pos):
+                    p = dict_pos_filtered[model][i]
+                    if any([dict_values_pcoc[m] [p-1] >= 0.99 for m in m_list]):
+                        new_order[i] = j
+                        j+=1
+                # 0.9
+                for i in range(nb_filtered_pos):
+                    p = dict_pos_filtered[model][i]
+                    if any([0.99 > dict_values_pcoc[m] [p-1] >= 0.9 for m in m_list]) and \
+                       all([0.99 > dict_values_pcoc[m] [p-1] for m in m_list]):
+                        new_order[i] = j
+                        j+=1
+                # 0.8
+                for i in range(nb_filtered_pos):
+                    p = dict_pos_filtered[model][i]
+                    if any([ 0.9 > dict_values_pcoc[m] [p-1] >= 0.8 for m in m_list]) and \
+                       all([ 0.9 > dict_values_pcoc[m] [p-1] for m in m_list]):
+                        new_order[i] = j
+                        j+=1
+                # other
+                for i in range(nb_filtered_pos):
+                    p = dict_pos_filtered[model][i]
+                    if all([ dict_values_pcoc[m] [p-1] < 0.8 for m in m_list]):
+                        new_order[i] = j
+                        j+=1
+                dict_pos_filtered[model] = reorder_l(dict_pos_filtered[model], new_order)
+
+
+        # filtered ali:
+        ## Per model
+        for model in ["PCOC", "PC", "OC", "union"]:
+            filtered_ali = []
+            for seq in ali:
+                new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
+                filtered_ali.append(new_seq)
+            SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
+            if model == "union":
+                modelstr = "union"
+            else:
+                modelstr = model
+            logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
+
+        ## Output
+
+        ### Table
+        #### complete:
+        df_bilan = pd.DataFrame.from_dict(dict_values_pcoc, orient='columns', dtype=None)
+        df_bilan["Sites"] = all_pos
+        df_bilan["Indel_prop"] = prop_indel
+        df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
+        df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
+        df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
+        df_bilan = df_bilan[["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC", "PC","OC"]]
+        #### filtered:
+        df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
+        df_bilan_f = df_bilan_f.copy()
+
+        df_bilan.to_csv(prefix_out +  ".results.tsv", index=False, sep='\t')
+        if not df_bilan_f.empty:
+            df_bilan_f.to_csv(prefix_out + ".filtered_results.tsv", index=False, sep='\t')
+
+
+        ### Plot
+        if args.plot:
+            if args.plot_complete_ali:
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
+                if args.svg:
+                    plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
+
+
+            for model in ["PCOC", "PC", "OC"]:
+                if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
+                    dict_values_pcoc_filtered_model = {}
+                    for (key, val) in dict_values_pcoc.items():
+                        dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
+                    plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
+                    if args.svg:
+                         plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
+
+            # all model
+            if dict_pos_filtered["union"]:
+                model = "union"
                 dict_values_pcoc_filtered_model = {}
                 for (key, val) in dict_values_pcoc.items():
                     dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
+                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
                 if args.svg:
-                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", hist_up = model, dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = args.reorder, det_tool=True, title = args.plot_title)
-
-        # all model
-        if dict_pos_filtered["union"]:
-            model = "union"
-            dict_values_pcoc_filtered_model = {}
-            for (key, val) in dict_values_pcoc.items():
-                dict_values_pcoc_filtered_model[key] = filter_l(val, dict_pos_filtered[model])
-            plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".pdf", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
-            if args.svg:
-                plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
+                    plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repfasta+"/filtered_ali."+model+".faa", prefix_out+"_plot_filtered_"+model+".svg", dict_benchmark = dict_values_pcoc_filtered_model, x_values= dict_pos_filtered[model], hp=positions_to_highlight, reorder = False, det_tool=True, title = args.plot_title)
 
 
     if not args.no_cleanup:
@@ -615,7 +638,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
     metadata_simu_dico["time"] = str(time.time() - start_detec)
 
-    return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, g_tree.conv_events.nodesWithTransitions
+    #return metadata_simu_dico, l_TPFPFNTN_mod_het, l_TPFPFNTN_topo, l_TPFPFNTN_obs_sub, g_tree.conv_events.nodesWithTransitions
 
 
 if __name__ == "__main__":
