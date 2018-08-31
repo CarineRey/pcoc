@@ -222,8 +222,8 @@ def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
 
     info_filename = "%s/%s_%s_%s%s.infos" %(repest, name , c1, c2, suffix)
 
-    if re.match("Number of sites retained.*: 0$",out) or \
-       re.match("Number of sites.*: 0$",out):
+    if re.search("^Number of sites retained.*: 0$",out,re.MULTILINE) or \
+       re.search("^Number of sites.*: 0$",out,re.MULTILINE):
         logger.warning("No site retained for %s (too much gaps), you can use the \"--max_gap_allowed\" option.", name)
         f_infos = open(info_filename,"w")
         f_infos.close()
@@ -272,7 +272,8 @@ def make_estim_conv(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max
     if debug_mode_bpp:
         logger.debug("%s\n%s\n%s", command, out, command)
 
-    if "Number of sites retained...............: 0" in out:
+    if re.search("^Number of sites retained.*: 0$",out,re.MULTILINE) or \
+       re.search("^Number of sites.*: 0$",out,re.MULTILINE):
         info_filename = "%s/%s_topo%s.infos" %(repest, name , suffix)
         logger.warning("No site retained for %s", info_filename)
         f_infos = open(info_filename,"w")
