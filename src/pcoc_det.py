@@ -303,11 +303,11 @@ if seq_not_in_tree:
     sys.exit(1)
 elif leaves_not_in_ali and not args.auto_trim_tree:
     logger.error("Some leaves do not match with a sequence: %s",",".join(list(leaves_not_in_ali)))
-    logger.error('You can use the "--auto_trim_tree" option to automatically remove them from the tree.')
+    logger.error('You can use the "--auto_trim_tree" option to automatically removed them from the tree.')
     sys.exit(1)
 elif leaves_not_in_ali and args.auto_trim_tree:
     logger.warning("Some leaves do not match with a sequence: %s",",".join(list(leaves_not_in_ali)))
-    logger.warning('You have used the "--auto_trim_tree" option, %s will be remove from the tree.' , list(leaves_not_in_ali) )
+    logger.warning('You have used the "--auto_trim_tree" option, %s will be removed from the tree.' , list(leaves_not_in_ali) )
     auto_trim_tree = seq_names
 else:
     logger.info("Sequence and leaf names match.")
