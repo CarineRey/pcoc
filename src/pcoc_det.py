@@ -124,10 +124,10 @@ AdvancedOptions.add_argument('--inv_gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
 AdvancedOptions.add_argument('--max_gap_allowed', type=int,
-                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100 (default:5%)",
+                    help="max gap allowed to take into account a site (in %%), must be between 0 and 100 (default:5%%)",
                     default=5)
 AdvancedOptions.add_argument('--max_gap_allowed_in_conv_leaves', type=int,
-                    help="max gap allowed in convergent leaves to take into account a site (in %%), must be between 0 and 100 (default:5%)",
+                    help="max gap allowed in convergent leaves to take into account a site (in %%), must be between 0 and 100 (default:5%%)",
                     default=5)
 AdvancedOptions.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
