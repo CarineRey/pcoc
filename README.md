@@ -113,6 +113,17 @@ Thus, to run **PCOC**, simply type:
 $CMD_PCOC_DOCKER [SOME PCOC TOOL] [SOME PCOC OPTIONS]
 ```
 
+### Singularity
+
+**PCOC** can also be run under [Singularity](https://www.sylabs.io/), a container system designed specifically for use on shared compute clusters.  By default, Singularity containers run as the current user, not root, so the environment settings and current directory mappings are not necessary.
+
+Unlike docker, Singularity "pull" will create an image in the current working directory that is referenced directly.
+
+```{sh}
+singularity pull docker://carinerey/pcoc
+singularity run ./pcoc.simg [SOME PCOC TOOL] [SOME PCOC OPTIONS]
+```
+
 ## 3. Usage
 
 

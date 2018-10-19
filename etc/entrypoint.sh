@@ -30,6 +30,6 @@ export HOME=/home/user
 echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 exec /usr/sbin/gosu user "$@"
 else
-echo "Starting with UID : root"
+echo "Starting with UID : `whoami`" 
 exec "$@"
 fi
