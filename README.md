@@ -74,6 +74,8 @@ mv tree_dir/cyp_coding.phy_phyml_tree.txt tree_dir/tree.nw
 
 ## 2. **PCOC** Installation
 
+### Docker
+
 PCOC relies on the `Bpp` suite (https://github.com/BioPP/bppsuite) which is in constant development. In order to avoid installation and compilation of the latest version on your machine (this can take a long time), we suggest you to use `Docker`. Of course, you can also use **PCOC** without Docker but `Docker` is the easiest way to use the **PCOC** toolkit locally. `Docker` will create a local environment on your computer that will contain **PCOC** dependencies  (`Bpp` and `python` with some modules (`ete3` and `Biopython`)).They will all be packaged within the **PCOC** `Docker` image.
 
 If you don't have Docker on your machine, get it [here](https://docs.docker.com/engine/installation/) first. (*Be aware that installation might differ if you're a Linux, a Mac or a Windows user.*)
@@ -111,6 +113,17 @@ Thus, to run **PCOC**, simply type:
 
 ```{sh}
 $CMD_PCOC_DOCKER [SOME PCOC TOOL] [SOME PCOC OPTIONS]
+```
+
+### Singularity
+
+**PCOC** can also be run under [Singularity](https://www.sylabs.io/), a container system designed specifically for use on shared compute clusters.  By default, Singularity containers run as the current user, not root, so the environment settings and current directory mappings are not necessary.
+
+Unlike docker, Singularity "pull" will create an image in the current working directory that is referenced directly.
+
+```{sh}
+singularity pull docker://carinerey/pcoc
+singularity run ./pcoc.simg [SOME PCOC TOOL] [SOME PCOC OPTIONS]
 ```
 
 ## 3. Usage
