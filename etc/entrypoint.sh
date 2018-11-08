@@ -19,8 +19,9 @@ W_DIR=${W_DIR:-/data}
 echo "Working directory : $W_DIR"
 cd $W_DIR
 
-if [ -n "$LOCAL_USER_ID" ] 
+if [ -n "$LOCAL_USER_ID" ]  # User / docker
 then
+echo "User / docker"
 Xvfb :1 -screen 0 1024x768x16 &
 export DISPLAY=:1.0
 USER_ID=${LOCAL_USER_ID:-9001}
@@ -29,7 +30,15 @@ useradd --shell /bin/bash -u $USER_ID -o -c "" -g sudo -m user
 export HOME=/home/user
 echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 exec /usr/sbin/gosu user "$@"
+elif [[ `whoami`=="root" ]] # Root / docker
+then
+Xvfb :1 -screen 0 1024x768x16 &
+export DISPLAY=:1.0
+echo "Root / docker"
+echo "Starting with UID : `whoami`"  # Root / docker
+exec "$@"
 else
-echo "Starting with UID : `whoami`" 
+echo "User / singularity"
+echo "Starting with UID : `whoami`"  # User / singularity
 exec xvfb-run -a "$@"
 fi
