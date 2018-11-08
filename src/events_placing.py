@@ -229,7 +229,7 @@ class gene_tree(object):
 
 
     def conv_events_is_ok(self):
-        return (len(self.conv_events.nodesWithConvergentModel) >= 1)
+        return (len(self.conv_events.nodesWithTransitions) >= 1)
 
     def resolve_conflicts_between_noisy_and_conv_profils(self):
         if self.cz_nodes:
@@ -811,6 +811,7 @@ def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_in
 
         if manual_mode_nodes:
             tree_all_transitions, nodesWithTransitions, observedNumTransitions = manualTransitions_new(manual_mode_nodes, tree_all_transitions)
+            #logger.debug ("Observed Number of Transitions (MANUEL): "+ str(observedNumTransitions ) + " compared to "+ str(maxTransitions) + " wanted in:" + nf )
         else:
             tree_all_transitions, nodesWithTransitions, observedNumTransitions = randomTransitions_new(maxTransitions, tree_all_transitions)
             #logger.debug ("Observed Number of Transitions: "+ str(observedNumTransitions ) + " compared to "+ str(maxTransitions) + " wanted in:" + nf )
@@ -822,13 +823,12 @@ def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_in
         nodesWithTransitions_list = random.sample(nodesWithTransitions_allCombinations, len(nodesWithTransitions_allCombinations))
 
         while maxConvRate < maxConvRateObs and nodesWithTransitions_list and numTries3 < 1000:
+            #logger.debug("%s < %s and %s and %s < 1000", maxConvRate , maxConvRateObs ,nodesWithTransitions_list ,numTries3)
             numTries3 = numTries3 + 1
             #logger.debug("numTries3: %s", numTries3)
             #delete maxTransitions-numTransitions random convergence events
             tree_final = tree_all_transitions.copy(method="deepcopy")
             lr=nodesWithTransitions_list.pop()
-            if not nodesWithTransitions_list:
-                numTries3 = 1000
             for n_ND in lr:
                 #print n_ND
                 node = tree_final.search_nodes(ND=n_ND)[0]
@@ -837,10 +837,8 @@ def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_in
                 node.T=False
                 #print node.get_ascii(attributes=["ND","name","C","T"])
 
-            #print nodesWithTransitions
-            #print lr
             nodesWithTransitions_filtered=[k for k in nodesWithTransitions if not k in lr]
-            #print nodesWithTransitions_filtered
+
             numberOfLeafsWithTransitions = 0
             for n_ND in nodesWithTransitions_filtered:
                 node = tree_final.search_nodes(ND=n_ND)[0]
