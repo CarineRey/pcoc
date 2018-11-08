@@ -362,6 +362,9 @@ if args.manual_mode:
         minTrans=len(manual_mode_nodes["T"])
     if args.c_max != len(manual_mode_nodes["T"]):
         maxTrans = len(manual_mode_nodes["T"])
+    if args.c > maxTrans:
+        logger.error("Number of events (-c) can not be superior to the number of transitions of your scenario")
+        sys.exit(1)
 
 
 
