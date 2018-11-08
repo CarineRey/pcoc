@@ -3,7 +3,7 @@
 set -e
 
 IMAGE_NAME=pcoc
-TAG=auto_trim_tree
+#TAG=master
 DOCKERFILE_DIR=.
 REPO=carinerey/$IMAGE_NAME:$TAG
 docker build -t $REPO -f etc/Dockerfile $DOCKERFILE_DIR
