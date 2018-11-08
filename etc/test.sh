@@ -16,7 +16,7 @@ meth="--pcoc --ident --topo"
 debug="--no_cleanup --debug"
 debug=""
 
-DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR  carinerey/pcoc:v1.0.1"
+DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR  carinerey/pcoc"
 
 # test1: TOPO IDENT PCOC NO_NOISE
 $DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -n_sites 1 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 1 --no_clean_seqs"
