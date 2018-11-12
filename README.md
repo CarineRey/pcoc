@@ -215,10 +215,10 @@ You will find:
 
 #### Graphical output options:
 
-* You can get a graphical output for all positions using  `--plot_complete_ali ` (default is pdf output, add `--svg` for svg output)
+* You can get a graphical output for all positions using  `--plot_complete_ali --plot ` (default is pdf output, add `--svg` for svg output)
 
     ```{sh}
-    $CMD_PCOC_DOCKER pcoc_det.py -t tree_dir/tree.nw -aa ali.fa -o output_pcoc_det -m $scenario --plot_complete_ali
+    $CMD_PCOC_DOCKER pcoc_det.py -t tree_dir/tree.nw -aa ali.fa -o output_pcoc_det -m $scenario --plot_complete_ali --plot
     ```
     You will additionally find in the output directory `ali_plot_complete.pdf`. This file contains a plot of the tree, the complete alignment and the posterior probability according to PCOC models (only if `--plot_complete_ali` has been used)
 
