@@ -30,7 +30,7 @@ useradd --shell /bin/bash -u $USER_ID -o -c "" -g sudo -m user
 export HOME=/home/user
 echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 exec /usr/sbin/gosu user "$@"
-elif [[ `whoami`=="root" ]] # Root / docker
+elif [[ `whoami` == "root" ]] # Root / docker
 then
 Xvfb :1 -screen 0 1024x768x16 &
 export DISPLAY=:1.0
