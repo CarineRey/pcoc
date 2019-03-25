@@ -36,6 +36,7 @@ import bpp_lib
 import events_placing
 import estim_data
 import plot_data
+import profile_tools
 
 import multiprocessing
 
@@ -119,9 +120,9 @@ Options_ali.add_argument('-nb_sampled_couple', type=int,  metavar="INT",
 Options_ali.add_argument('-n_sites', type=int,  metavar="INT",
                     help="Number of simulated sites per alignment. (default: 100)",
                     default=100)
-Options_ali.add_argument('-CATX_sim', type=int, choices = [10,60],
-                    help="Profile categories to simulate data (10->C10 or 60->C60). (default: 60)",
-                    default=60)
+Options_ali.add_argument('-sim_profiles', type=str, metavar="[C10,C60,filename]",
+                    help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C60)",
+                    default="C60")
 Options_ali.add_argument('-min_dist_CAT', type=float, metavar="FLOAT",
                     help="Minimum distance between Ancestral and Convergent profiles to simulate the alignment (default: no limits)",
                     default=0)
@@ -148,9 +149,9 @@ Options_ben.add_argument('--ident', action="store_true",
 Options_ben.add_argument('--topo', action="store_true",
                     help="Use the topological approach to detect sites under convergent evolution.",
                     default=False)
-Options_ben.add_argument('-CATX_est', type=int, choices = [10,60],
-                    help="Profile categories to estimate data (10->C10 or 60->C60). (default: 10)",
-                    default=10)
+Options_ben.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
+                    help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
+                    default="C10")
 Options_ben.add_argument('--plot_event_repartition', action="store_true",
                     help="Plot chosen random convergent events repartition for each input tree.",
                     default=False)
@@ -237,8 +238,92 @@ if not os.path.exists(repbppconfig):
     os.mkdir(repbppconfig)
 
 
-bpp_lib.write_config(repbppconfig, estim=True, NbCat = args.CATX_sim)
+##########################
+# Profiles configuration #
+##########################
+
+## sim profiles definition
+sim_profiles = profile_tools.check_profiles(args.sim_profiles)
+NbCat_Sim = sim_profiles.nb_cat
+
+## est profiles definition
+est_profiles = profile_tools.check_profiles(args.est_profiles)
+NbCat_Est = est_profiles.nb_cat
+
+
+MinDistCAT = args.min_dist_CAT
+Nb_sampled_couple = args.nb_sampled_couple
+
+metadata_run_dico["Profile categories use during simulation"] = sim_profiles.name
+metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
+metadata_run_dico["Number of sampled profile couples per scenario"] = Nb_sampled_couple
+metadata_run_dico["Minimum distance between 2 profiles of a couple to be use for simulations"] = MinDistCAT
+
+
+### Choose CAT profiles
+
+CATcouples = []
+if MinDistCAT > 0:
+    with open(repbppconfig+'/CATC'+str(NbCat_Sim)+'Distances.csv', 'rb') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        first_line = True
+        for row in reader:
+            #print row
+            if first_line:
+                first_line = False
+                colnames = row
+                colnames.pop(0)
+            else:
+                C1 = int(row.pop(0).replace("C",""))
+                for C2 in colnames:
+                    C2 = int(C2.replace("C",""))
+                    d=float(row.pop(0))
+                    if d >= MinDistCAT:
+                        CATcouples.append((C1,C2))
+                    else:
+                        #print("rejecte %s %s" %(C1,C2))
+                        pass
+else:
+    for C1 in range(1,NbCat_Sim+1):
+        for C2 in range(1,NbCat_Sim+1):
+            if C1 != C2:
+                CATcouples.append((C1,C2))
+
+if not Nb_sampled_couple:
+    Nb_sampled_couple = len(CATcouples)
+elif Nb_sampled_couple > len(CATcouples):
+    Nb_sampled_couple = len(CATcouples)
+
 dist_C1_C2 =  pd.read_csv(repbppconfig+'/CATC'+str(args.CATX_sim)+'Distances.csv', index_col=0)
+
+
+    if sim_profiles_name == "C10":
+        files_list.append(("CATC10Distances.csv", CATC10Distances))
+    elif sim_profiles_name == "C60":
+        files_list.append(("CATC60Distances.csv", CATC60Distances))
+
+    for (f, s) in files_list:
+
+        with open(d+"/"+f, "w") as F:
+            F.write(s)
+
+logger.info("Profile category uses during simulation:\t%s", NbCat_Sim)
+logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
+logger.info("Minimum distance between 2 profiles of a couple to be use for simulations:\t%s", MinDistCAT)
+logger.info("Number of sampled profile couples per scenario:\t%s", Nb_sampled_couple)
+
+
+
+############################
+# Bpp output configuration #
+############################
+
+# Bpp global configuration
+bpp_lib.write_config(repbppconfig, estim=True)
+
+#######################
+# Trees configuration #
+#######################
 
 lnf=glob.glob(args.tree_dir+"/*")
 
@@ -257,7 +342,6 @@ if bl_new >0:
 else:
     bl_new = -1
     metadata_run_dico["Branch length remplacement"] = "no"
-
 
 
 #http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
@@ -305,6 +389,10 @@ if len(lnf) > 1 and args.manual_mode:
     sys.exit(1)
 
 metadata_run_dico["Input trees"] = ",".join([os.path.basename(t) for t in lnf])
+
+##########################
+# Scenario configuration #
+##########################
 
 Nbsimul=args.n_sc
 maxTrans=args.c_max
@@ -381,16 +469,10 @@ logger.info("Minimum number of convergent events:\t%s", minTrans)
 logger.info("Maximum rate of the number of Convergent/Non-convergent leaves:\t%s", maxConvRate)
 
 
-NbCat_Sim = args.CATX_sim
-NbCat_Est = args.CATX_est
 
-MinDistCAT = args.min_dist_CAT
-Nb_sampled_couple = args.nb_sampled_couple
-
-metadata_run_dico["Profile categories use during simulation"] = NbCat_Sim
-metadata_run_dico["Profile categories use during estimation"] = NbCat_Est
-metadata_run_dico["Number of sampled profile couples per scenario"] = Nb_sampled_couple
-metadata_run_dico["Minimum distance between 2 profiles of a couple to be use for simulations"] = MinDistCAT
+##################################
+# Detection method configuration #
+##################################
 
 pcoc_str = "No"
 topo_str = "No"
@@ -409,46 +491,6 @@ metadata_run_dico["Run topological method"] = topo_str
 metadata_run_dico["Run identical method"] = ident_str
 
 pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
-
-### Choose CAT profiles
-
-CATcouples = []
-if MinDistCAT > 0:
-    with open(repbppconfig+'/CATC'+str(NbCat_Sim)+'Distances.csv', 'rb') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        first_line = True
-        for row in reader:
-            #print row
-            if first_line:
-                first_line = False
-                colnames = row
-                colnames.pop(0)
-            else:
-                C1 = int(row.pop(0).replace("C",""))
-                for C2 in colnames:
-                    C2 = int(C2.replace("C",""))
-                    d=float(row.pop(0))
-                    if d >= MinDistCAT:
-                        CATcouples.append((C1,C2))
-                    else:
-                        #print("rejecte %s %s" %(C1,C2))
-                        pass
-else:
-    for C1 in range(1,NbCat_Sim+1):
-        for C2 in range(1,NbCat_Sim+1):
-            if C1 != C2:
-                CATcouples.append((C1,C2))
-
-if not Nb_sampled_couple:
-    Nb_sampled_couple = len(CATcouples)
-elif Nb_sampled_couple > len(CATcouples):
-    Nb_sampled_couple = len(CATcouples)
-
-
-logger.info("Profile category uses during simulation:\t%s", NbCat_Sim)
-logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
-logger.info("Minimum distance between 2 profiles of a couple to be use for simulations:\t%s", MinDistCAT)
-logger.info("Number of sampled profile couples per scenario:\t%s", Nb_sampled_couple)
 
 
 def remove_folder(path):
