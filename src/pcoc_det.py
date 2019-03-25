@@ -51,7 +51,7 @@ start_time = time.time()
 ### Option defining
 parser = argparse.ArgumentParser(prog="pcoc_det.py",
                                  description='')
-parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+parser.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 
 parser._optionals.title = "MISCELLANEOUS"
 #parser.add_argument('-cpu', type=int,
