@@ -34,22 +34,20 @@ debug_mode_bpp = False
 ##                    Functions                                       ##
 ########################################################################
 
-def write_config(d, estim=True, NbCat=""):
+def write_global_config(d, estim=True, sim_profiles_name=""):
     bpp_config_files_estim = [
-                   #("CATseq.bpp", CATseq_bpp),
                    ("CATseq_estim.bpp", CATseq_estim),
-                   #("CATseq_OneChange.bpp", CATseq_OneChange_bpp),
                    ("CATseq_conv.bpp", CATseq_conv_bpp)]
     bpp_config_files_sim = [("CATseq_sim_noconv.bpp", CATseq_sim_noconv_bpp),
-                   ("CATseq_sim_conv.bpp", CATseq_sim_conv_bpp)]
+                            ("CATseq_sim_conv.bpp", CATseq_sim_conv_bpp)]
 
     files_list = bpp_config_files_sim
     if estim:
         files_list.extend(bpp_config_files_estim)
 
-    if NbCat == 10:
+    if sim_profiles_name == "C10":
         files_list.append(("CATC10Distances.csv", CATC10Distances))
-    elif NbCat == 60:
+    elif sim_profiles_name == "C60":
         files_list.append(("CATC60Distances.csv", CATC60Distances))
 
     for (f, s) in files_list:
