@@ -55,7 +55,7 @@ start_time = time.time()
 ### Option defining
 parser = argparse.ArgumentParser(prog="pcoc_sim.py",
                                  description='')
-parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+parser.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 parser._optionals.title = "Miscellaneous options"
 parser.add_argument('-cpu', type=int,
                     help="Number of cpu to use. (default: 1)",

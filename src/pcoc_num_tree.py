@@ -34,7 +34,7 @@ start_time = time.time()
 ### Option defining
 parser = argparse.ArgumentParser(prog="pcoc_num_tree.py",
                                  description='')
-parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+parser.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 
 ##############
 requiredOptions = parser.add_argument_group('Required arguments')
