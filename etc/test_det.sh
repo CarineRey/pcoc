@@ -24,7 +24,7 @@ echo "((((Microbat:0.152207[&&NHX:Condition=1:Transition=1],Megabat:0.118463[&&N
 wget https://raw.githubusercontent.com/gilles-didier/Convergence/master/data/alignments/SLC26A5.fasta -P data/
 ali=$PWD/data/SLC26A5.fasta
 
-DOCKER_CMD="docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc"
+DOCKER_CMD="docker run -e LOCAL_USER_ID=`id -u $USER` --rm -v $PWD:$PWD carinerey/pcoc:v1.1.0"
 
 ## First identify the nodes with convergent transitions with pcoc_num_tree.py
 $DOCKER_CMD pcoc_num_tree.py -t $tree -o $PWD/data/num_tree.pdf
