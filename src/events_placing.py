@@ -213,8 +213,9 @@ class gene_tree(object):
         self.repbppconfig          = repbppconfig
 
 
-    def add_noisy_profils(self,NbCat):
-       self.init_tree, self.cz_nodes, r_cz = noise_tree(self.init_tree, NbCat = NbCat)
+    def add_noisy_profils(self, sim_profiles):
+        
+       self.init_tree, self.cz_nodes, r_cz = noise_tree(self.init_tree, sim_profiles)
 
     def placeNTransitionsInTree(self,n_events, minTrans, maxTrans, maxConvRate):
         self.n_events = n_events
@@ -723,7 +724,8 @@ def randomTransitions_cz(Cz, tree):
 
   return tree, nodesWithNoisyModel, totalNumberOfTransitions
 
-def noise_tree(tree_ini, NbCat = 10):
+def noise_tree(tree_ini, sim_profiles):
+    NbCat = sim_profiles.nb_cat
 
     numberOfLeafs = len(tree_ini.get_tree_root().get_leaves()) + 1
     logger.debug( "(numberOfLeafs start: %s)", numberOfLeafs)

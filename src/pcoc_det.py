@@ -33,6 +33,7 @@ import math
 import bpp_lib
 import events_placing
 import estim_data
+import profile_tools
 
 #import multiprocessing
 
@@ -116,9 +117,9 @@ AdvancedOptions = parser.add_argument_group('OPTIONS FOR ADVANCED USAGE')
 AdvancedOptions.add_argument('--auto_trim_tree', action="store_true",
                     help="Remove leaves from the tree not present in the alignment.",
                     default=False)
-AdvancedOptions.add_argument('-CATX_est', type=int, choices = [10,60],
-                    help="Profile categorie to estimate data (10->C10 or 60->C60). (default: 10)",
-                    default=10)
+AdvancedOptions.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
+                    help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
+                    default="C10")
 AdvancedOptions.add_argument('--gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
@@ -178,33 +179,21 @@ LogFile = OutDirName + "/pcoc_det.log"
 # create logger
 logger = logging.getLogger("pcoc")
 logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-#fh = logging.FileHandler(LogFile)
+
 # create console handler with a higher log level
 ch = logging.StreamHandler()
 if args.debug:
     ch.setLevel(logging.DEBUG)
-#    fh.setLevel(logging.DEBUG)
 else:
     ch.setLevel(logging.INFO)
-#    fh.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter_fh = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 formatter_ch = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-#fh.setFormatter(formatter_fh)
 ch.setFormatter(formatter_ch)
 # add the handlers to the logger
-#logger.addHandler(fh)
 logger.addHandler(ch)
 
 logger.debug(sys.argv)
-
-#cpu = args.cpu
-#try:
-#    cpus = multiprocessing.cpu_count()
-#except NotImplementedError:
-#    cpus = 1   # arbitrary default
-#logger.info("%s on %s cpus", cpu, cpus)
 
 if args.LD_LIB:
     logger.info("$LD_LIBRARY_PATH will be change from %s to %s", os.environ.get("LD_LIBRARY_PATH", ""), args.LD_LIB)
@@ -212,15 +201,33 @@ if args.LD_LIB:
 else:
     logger.debug("$LD_LIBRARY_PATH is %s", os.environ.get("LD_LIBRARY_PATH", ""))
 
-
-repbppconfig = OutDirName +  "bpp_config"
+repbppconfig = OutDirName + "bpp_config"
 if not os.path.exists(repbppconfig):
     os.mkdir(repbppconfig)
 
-bpp_lib.write_config(repbppconfig, estim=True)
+##########################
+# Profiles configuration #
+##########################
 
-#http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
-pattern = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\b")
+## est profiles definition
+est_profiles = profile_tools.check_profiles(args.est_profiles, repbppconfig, "est")
+NbCat_Est = est_profiles.nb_cat
+
+metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
+
+logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
+
+############################
+# Bpp output configuration #
+############################
+
+# Bpp global configuration
+bpp_lib.write_global_config(repbppconfig, estim=True)
+
+
+#####################
+# Ali configuration #
+#####################
 
 
 logger.info("alignment: %s", args.ali)
@@ -257,11 +264,18 @@ logger.info("alignment ok after checking")
 n_sites = ali.get_alignment_length()
 nb_seq = len(ali)
 
+#######################
+# Trees configuration #
+#######################
+
+
+#http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
+pattern = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\b")
 
 logger.info("tree: %s", args.tree)
 tree_filename = args.tree
-# test if a tree
 
+# test if a tree
 
 try:
     t=Tree(tree_filename)
@@ -366,7 +380,7 @@ elif args.manual_mode:
         manual_mode_nodes["T"].append(l_e[0])
         manual_mode_nodes["C"].extend(l_e[1:])
 
-NbCat_Est = args.CATX_est
+
 metadata_run_dico["NbCat_Est"] = NbCat_Est
 metadata_run_dico["Tree"] = os.path.basename(tree_filename)
 metadata_run_dico["Alignment"] = os.path.basename(ali_filename)
@@ -407,11 +421,14 @@ metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
 metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
 
 
-
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
+<<<<<<< HEAD
 
 pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", header=True, sep='\t')
+=======
+pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
+>>>>>>> 79d8f9b... big refactoring
 
 def remove_folder(path):
     # check if folder exists
@@ -480,12 +497,12 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         for (e1,e2) in set_e1e2:
             logger.debug ("Estime e1: %s e2: %s", e1, e2)
             # Positif
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
 
 
         ### post proba
-        res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
+        res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, est_profiles, set_e1e2=set_e1e2, ID=date)
         l_TPFPFNTN_mod_het.extend(res)
 
         for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
@@ -610,7 +627,6 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 if args.svg:
                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
 
-
             for model in ["PCOC", "PC", "OC"]:
                 if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
                     dict_values_pcoc_filtered_model = {}
@@ -670,5 +686,3 @@ if __name__ == "__main__":
 
     logger.info("--- %s seconds ---", str(time.time() - start_time))
     logger.info("Output dir: %s", OutDirName)
-
-

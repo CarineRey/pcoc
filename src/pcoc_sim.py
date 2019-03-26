@@ -124,7 +124,7 @@ Options_ali.add_argument('-sim_profiles', type=str, metavar="[C10,C60,filename]"
                     help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C60)",
                     default="C60")
 Options_ali.add_argument('-min_dist_CAT', type=float, metavar="FLOAT",
-                    help="Minimum distance between Ancestral and Convergent profiles to simulate the alignment (default: no limits)",
+                    help="Minimum euclidean distance between Ancestral and Convergent profiles to simulate the alignment (default: no limits)",
                     default=0)
 Options_ali.add_argument('--plot_ali', action="store_true",
                     help="For each couple of profiles, plot a summary of the convergent scenario containing the tree and the alignment.",
@@ -243,75 +243,36 @@ if not os.path.exists(repbppconfig):
 ##########################
 
 ## sim profiles definition
-sim_profiles = profile_tools.check_profiles(args.sim_profiles)
+sim_profiles = profile_tools.check_profiles(args.sim_profiles, repbppconfig, "sim")
 NbCat_Sim = sim_profiles.nb_cat
 
 ## est profiles definition
-est_profiles = profile_tools.check_profiles(args.est_profiles)
+est_profiles = profile_tools.check_profiles(args.est_profiles, repbppconfig, "est")
 NbCat_Est = est_profiles.nb_cat
 
+metadata_run_dico["Profile categories use during simulation"] = sim_profiles.name
+metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
+
+logger.info("Profile category uses during simulation:\t%s", NbCat_Sim)
+logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
+
+### Choose CAT profiles
 
 MinDistCAT = args.min_dist_CAT
 Nb_sampled_couple = args.nb_sampled_couple
 
-metadata_run_dico["Profile categories use during simulation"] = sim_profiles.name
-metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
-metadata_run_dico["Number of sampled profile couples per scenario"] = Nb_sampled_couple
-metadata_run_dico["Minimum distance between 2 profiles of a couple to be use for simulations"] = MinDistCAT
-
-
-### Choose CAT profiles
-
-CATcouples = []
-if MinDistCAT > 0:
-    with open(repbppconfig+'/CATC'+str(NbCat_Sim)+'Distances.csv', 'rb') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        first_line = True
-        for row in reader:
-            #print row
-            if first_line:
-                first_line = False
-                colnames = row
-                colnames.pop(0)
-            else:
-                C1 = int(row.pop(0).replace("C",""))
-                for C2 in colnames:
-                    C2 = int(C2.replace("C",""))
-                    d=float(row.pop(0))
-                    if d >= MinDistCAT:
-                        CATcouples.append((C1,C2))
-                    else:
-                        #print("rejecte %s %s" %(C1,C2))
-                        pass
-else:
-    for C1 in range(1,NbCat_Sim+1):
-        for C2 in range(1,NbCat_Sim+1):
-            if C1 != C2:
-                CATcouples.append((C1,C2))
+CATcouples = sim_profiles.get_CATcouples(MinDistCAT)
 
 if not Nb_sampled_couple:
     Nb_sampled_couple = len(CATcouples)
 elif Nb_sampled_couple > len(CATcouples):
     Nb_sampled_couple = len(CATcouples)
 
-dist_C1_C2 =  pd.read_csv(repbppconfig+'/CATC'+str(args.CATX_sim)+'Distances.csv', index_col=0)
-
-
-    if sim_profiles_name == "C10":
-        files_list.append(("CATC10Distances.csv", CATC10Distances))
-    elif sim_profiles_name == "C60":
-        files_list.append(("CATC60Distances.csv", CATC60Distances))
-
-    for (f, s) in files_list:
-
-        with open(d+"/"+f, "w") as F:
-            F.write(s)
-
-logger.info("Profile category uses during simulation:\t%s", NbCat_Sim)
-logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
 logger.info("Minimum distance between 2 profiles of a couple to be use for simulations:\t%s", MinDistCAT)
 logger.info("Number of sampled profile couples per scenario:\t%s", Nb_sampled_couple)
 
+metadata_run_dico["Number of sampled profile couples per scenario"] = Nb_sampled_couple
+metadata_run_dico["Minimum distance between 2 profiles of a couple to be use for simulations"] = MinDistCAT
 
 
 ############################
@@ -319,7 +280,7 @@ logger.info("Number of sampled profile couples per scenario:\t%s", Nb_sampled_co
 ############################
 
 # Bpp global configuration
-bpp_lib.write_config(repbppconfig, estim=True)
+bpp_lib.write_global_config(repbppconfig, estim=True)
 
 #######################
 # Trees configuration #
@@ -524,7 +485,7 @@ def mk_simu(input_set, n_try = 0) :
     if args.ali_noise:
         logger.info("%s - Addition of noise in the alignment: Yes", name0_info)
         metadata_simu_dico["AliNoise"] = "Yes"
-        g_tree.add_noisy_profils(args.CATX_sim)
+        g_tree.add_noisy_profils(sim_profiles)
     else:
         logger.info("%s - Addition of noise in the alignment: No", name0_info)
         metadata_simu_dico["AliNoise"] = "No"
@@ -641,7 +602,7 @@ def mk_simu(input_set, n_try = 0) :
         if c1!=c2:
             # Positif
             nameAC="%s_A%d_C%d"%(name0,c1,c2)
-            bpp_lib.make_simul(nameAC,c1,c2,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim)
+            bpp_lib.make_simul(nameAC,c1,c2,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles)
             AC_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameAC)
             if not os.path.isfile(AC_fasta_file):
                 logger.error("%s does not exist", AC_fasta_file)
@@ -651,7 +612,7 @@ def mk_simu(input_set, n_try = 0) :
 
             # Negatif
             nameA="%s_A%d_C%d"%(name0,c1,c1)
-            bpp_lib.make_simul(nameA,c1,c1,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, nbCAT=NbCat_Sim)
+            bpp_lib.make_simul(nameA,c1,c1,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles)
 
             A_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameA)
             if not os.path.isfile(A_fasta_file):
@@ -663,26 +624,25 @@ def mk_simu(input_set, n_try = 0) :
             if args.pcoc:
                 # Test optimal
                 # Positif
-                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
-                bpp_lib.make_estim(nameAC,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
                 # Negatif
-                bpp_lib.make_estim(nameA,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
-                bpp_lib.make_estim(nameA,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_withOneChange", OneChange = True)
+                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
                 # Test optimal No One Change
                 # Positif
-                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
-                bpp_lib.make_estim(nameAC,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC,c1,c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
+                bpp_lib.make_estim(nameAC,c1,c2, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
                 # Negatif
-                bpp_lib.make_estim(nameA,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
-                bpp_lib.make_estim(nameA,c1,c2,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
+                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
 
             if args.topo:
                 # Test optimal
-
                 # Positif
-                bpp_lib.make_estim(nameAC,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange", OneChange = False)
+                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
                 # Negatif
-                bpp_lib.make_estim(nameA,c1,c1,g_tree, NBCATest=NbCat_Sim, suffix="_opt_noOneChange",  OneChange = False)
+                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange",  OneChange=False)
 
             if args.topo or args.pcoc:
                 set_e1e2 = []
@@ -693,26 +653,26 @@ def mk_simu(input_set, n_try = 0) :
                         if (e1 == e2) and (args.topo or args.pcoc):
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
-                            bpp_lib.make_estim(nameAC, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
                             # Negatif
-                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                                bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
 
                         if (e1 != e2) and args.pcoc:
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
-                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
-                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
                             # Negatif
-                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False)
-                            bpp_lib.make_estim(nameA, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange = True)
 
                 if args.pcoc:
                     ### Calcul VP FP FN VN Model het
-                    res, bilan = estim_data.dico_typechg(c1,c2,nameAC,g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
+                    res, bilan = estim_data.dico_typechg(c1, c2, nameAC, g_tree, est_profiles, sim_profiles, set_e1e2=set_e1e2, n_sites=Nsites, ID=date)
                     l_TPFPFNTN_mod_het.extend(res)
 
                     for k in [11,12]:
@@ -739,7 +699,7 @@ def mk_simu(input_set, n_try = 0) :
                 estim_data.outdiff(c1, c1, nameA, g_tree)
 
                 ### Calcul VP FP FN VN obs sub
-                res_sub, bilan_sub = estim_data.dico_typechg_obs_sub(c1,c2,nameAC,g_tree, n_sites = Nsites, ID = date, dist_C1_C2 = dist_C1_C2)
+                res_sub, bilan_sub = estim_data.dico_typechg_obs_sub(c1, c2, nameAC, g_tree, est_profiles, sim_profiles, n_sites=Nsites, ID=date)
                 l_TPFPFNTN_obs_sub.extend(res_sub)
 
                 for k in [11,12]:
@@ -748,21 +708,33 @@ def mk_simu(input_set, n_try = 0) :
             if args.topo:
                 #OPT
                 # Positif
+<<<<<<< HEAD
                 bpp_lib.make_estim_conv_topo(nameAC,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
                 # Negatif
                 bpp_lib.make_estim_conv_topo(nameA,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+=======
+                bpp_lib.make_estim_conv(nameAC, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
+                # Negatif
+                bpp_lib.make_estim_conv(nameA, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
+>>>>>>> 79d8f9b... big refactoring
 
                 set_t1 = []
                 for t1 in range(1, (NbCat_Est+1)):
                     set_t1.append(t1)
                     logger.debug ("Estime t1: %s ", t1)
                     # Positif
+<<<<<<< HEAD
                     bpp_lib.make_estim_conv_topo(nameAC,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
                     # Negatif
                     bpp_lib.make_estim_conv_topo(nameA,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+=======
+                    bpp_lib.make_estim_conv(nameAC, t1, g_tree, est_profiles, suffix="_t"+str(t1))
+                    # Negatif
+                    bpp_lib.make_estim_conv(nameA, t1, g_tree, est_profiles, suffix="_t"+str(t1))
+>>>>>>> 79d8f9b... big refactoring
 
 
-                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2, nameAC, g_tree, set_t1=set_t1, n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
+                res_topo, bilan_topo = estim_data.dico_typechg_topo(c1, c2, nameAC, g_tree, est_profiles, sim_profiles, set_t1=set_t1, n_sites=Nsites, ID=date)
                 l_TPFPFNTN_topo.extend(res_topo)
 
                 for k in [11,12]:
