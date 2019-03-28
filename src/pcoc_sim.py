@@ -152,6 +152,9 @@ Options_ben.add_argument('--topo', action="store_true",
 Options_ben.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
                     help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
                     default="C10")
+Options_ali.add_argument('-p_conv', type=float, metavar="FLOAT [0,1]",
+                    help="Probability of a declared transition to be a convergent transition (in pcoc) (default: 1, all transitions must be seen)",
+                    default=1)
 Options_ben.add_argument('--plot_event_repartition', action="store_true",
                     help="Plot chosen random convergent events repartition for each input tree.",
                     default=False)
@@ -253,8 +256,8 @@ NbCat_Est = est_profiles.nb_cat
 metadata_run_dico["Profile categories use during simulation"] = sim_profiles.name
 metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
 
-logger.info("Profile category uses during simulation:\t%s", NbCat_Sim)
-logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
+logger.info("Profile category uses during simulation:\t%s\t%s", NbCat_Sim, sim_profiles.name)
+logger.info("Profile category uses during estimation:\t%s\t%s", NbCat_Est, est_profiles.name)
 
 ### Choose CAT profiles
 
@@ -440,6 +443,13 @@ topo_str = "No"
 ident_str = "No"
 if args.pcoc:
     pcoc_str = "Yes"
+    pcoc_relproba = args.p_conv
+    if pcoc_relproba != 1:
+        logger.info("Run PCOC with pcoc_relproba:\t%s", pcoc_relproba)
+        metadata_run_dico["pcoc_p_conv"] = str(pcoc_relproba)
+    if pcoc_relproba > 1 or pcoc_relproba < 0:
+        logger.error("p_conv must be in [0, 1] (%s)", pcoc_relproba)
+        sys.exit(1)
 if args.topo:
     topo_str = "Yes"
 if args.ident:
@@ -585,7 +595,7 @@ def mk_simu(input_set, n_try = 0) :
     k_couple = 0
     for (c1,c2) in SampledCATcouples:
         k_couple+=1
-        logger.info("Scenario %s/%s - Couple %s/%s, C1: %s, C2: %s", simu_id, Nbsimul, k_couple, Nb_sampled_couple, c1, c2)
+        logger.info("Scenario %s/%s - Couple %s/%s, C_anc: %s, C_conv: %s", simu_id, Nbsimul, k_couple, Nb_sampled_couple, sim_profiles.get_profile_name(c1), sim_profiles.get_profile_name(c2))
 
         dict_benchmark = {11:{}, 12:{}}
 
@@ -624,15 +634,15 @@ def mk_simu(input_set, n_try = 0) :
             if args.pcoc:
                 # Test optimal
                 # Positif
-                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
-                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
+                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
                 # Negatif
-                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
-                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
+                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
                 # Test optimal No One Change
                 # Positif
-                bpp_lib.make_estim(nameAC,c1,c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
-                bpp_lib.make_estim(nameAC,c1,c2, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
+                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
+                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
                 # Negatif
                 bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
                 bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
@@ -655,20 +665,20 @@ def mk_simu(input_set, n_try = 0) :
                             # Positif
                             bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
+                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
                             # Negatif
                             bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
+                                bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
 
                         if (e1 != e2) and args.pcoc:
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
                             bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
-                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
                             # Negatif
                             bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
-                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange = True)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange = True, relproba=pcoc_relproba)
 
                 if args.pcoc:
                     ### Calcul VP FP FN VN Model het
@@ -708,30 +718,18 @@ def mk_simu(input_set, n_try = 0) :
             if args.topo:
                 #OPT
                 # Positif
-<<<<<<< HEAD
-                bpp_lib.make_estim_conv_topo(nameAC,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+                bpp_lib.make_estim_conv_topo(nameAC, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
                 # Negatif
-                bpp_lib.make_estim_conv_topo(nameA,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
-=======
-                bpp_lib.make_estim_conv(nameAC, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
-                # Negatif
-                bpp_lib.make_estim_conv(nameA, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
->>>>>>> 79d8f9b... big refactoring
+                bpp_lib.make_estim_conv_topo(nameA, c1, g_tree, sim_profiles, suffix="_t"+str(c1)+"_opt")
 
                 set_t1 = []
                 for t1 in range(1, (NbCat_Est+1)):
                     set_t1.append(t1)
                     logger.debug ("Estime t1: %s ", t1)
                     # Positif
-<<<<<<< HEAD
-                    bpp_lib.make_estim_conv_topo(nameAC,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+                    bpp_lib.make_estim_conv_topo(nameAC, t1, g_tree, est_profiles, suffix="_t"+str(t1))
                     # Negatif
-                    bpp_lib.make_estim_conv_topo(nameA,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
-=======
-                    bpp_lib.make_estim_conv(nameAC, t1, g_tree, est_profiles, suffix="_t"+str(t1))
-                    # Negatif
-                    bpp_lib.make_estim_conv(nameA, t1, g_tree, est_profiles, suffix="_t"+str(t1))
->>>>>>> 79d8f9b... big refactoring
+                    bpp_lib.make_estim_conv_topo(nameA, t1, g_tree, est_profiles, suffix="_t"+str(t1))
 
 
                 res_topo, bilan_topo = estim_data.dico_typechg_topo(c1, c2, nameAC, g_tree, est_profiles, sim_profiles, set_t1=set_t1, n_sites=Nsites, ID=date)
