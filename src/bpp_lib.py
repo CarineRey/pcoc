@@ -97,10 +97,14 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     if sim_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
         command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
-        command+=" modelOC=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(c2)
-    #else:
-        #command+=" modelA=\'LG08+F(name = Fixed ,fitness=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' " %(c1)
-        #command+=" modelC=\'LG08+F(name = Fixed ,fitness=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' " %(c2)
+        command+=" modelOC=\'OneChange(model=$(modelC))\' "
+    else:
+        command+=" modelA=\'LG08+F(%s)\' " %(sim_profiles.format_freq_LG08(c1))
+        command+=" modelC=\'LG08+F(%s)\' " %(sim_profiles.format_freq_LG08(c2))
+        #command+=" modelA=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        #command+=" modelC=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        command+=" modelOC=\'OneChange(model=$(modelC))\' " #PROBLEM
+
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 
@@ -159,7 +163,7 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     out = commands.getoutput(command)
 
     if debug_mode_bpp:
-        logger.debug("%s\n%s\n%s", command, out, command)
+        logger.info("%s\n%s\n%s", command, out, command)
 
 
 ########################################################################
@@ -168,7 +172,7 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
 
 def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
                OneChange=True, ext=".fa", gamma=False,
-               max_gap_allowed=90, inv_gamma=False):
+               max_gap_allowed=90, inv_gamma=False, relproba=1):
 
     nodesWithAncestralModel  = g_tree.conv_events.nodesWithAncestralModel_est
     nodesWithTransitions     = g_tree.conv_events.nodesWithTransitions_est
@@ -201,11 +205,15 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     if est_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
         command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
-        command+=" modelOC=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(c2)
-    #else:
-        #
-        #
-        #
+        command+=" modelOC=\'OneChange(model=$(modelC))\' "
+    else:
+        command+=" modelA=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c1))
+        command+=" modelC=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c2))
+        command+=" modelOC=\'OneChange(model=$(modelC))\' " #PROBLEM
+        #command+=" modelA=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        #command+=" modelC=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        
+
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 
@@ -218,14 +226,20 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         if nodesWithConvergentModel:
             number_of_models +=1
             command+=" \'model%s=$(modelC)\' " %(number_of_models)
+           #command+=" \'model%s=MixedModel(model=Mixture(model1=$(modelC),model2=$(modelA),relproba1=Simple(values=(0.99,0.01),probas=(%s,%s))))\' " %(number_of_models, relproba, 1-relproba)
             command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
 
         if nodesWithTransitions:
             number_of_models +=1
             # Mixture
-            relproba1 = 0.9
-            command+=" \'model%s=Mixture(model1=$(modelOC),model2=$(modelC),relproba1=%d)\' " %(number_of_models, relproba1)
+            command+=" \'model%s=Mixture(model1=$(modelOC),model2=$(modelA),relproba1=%s)\' " %(number_of_models, relproba)
+           #command+=" \'model%s=MixedModel(model=Mixture(model1=$(modelOC),model2=$(modelA),relproba1=Simple(values=(0.99,0.01),probas=(%s,%s))))\' " %(number_of_models, relproba, 1-relproba)
             command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
+        
+        if not relproba in [0,1] and number_of_models == 3: # mixture model
+            command+=" site.number_of_paths=2 "
+            command+=" site.path1=\'model2[Mixture.relproba1_1] & model3[Mixture.relproba1_1]\' "
+            #command+=" site.path2=\'model2[Mixture.relproba1_1] & model3[Mixture.relproba1_2]\' "
 
     else:
         nodesWithTransitionsAndWithConvergentModel = nodesWithTransitions+nodesWithConvergentModel
@@ -247,7 +261,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
         sys.error(1)
 
-    command += "nonhomogeneous.number_of_models=%d " %(number_of_models)
+    command += "nonhomogeneous.number_of_models=%s " %(number_of_models)
 
     if debug_mode_bpp:
         logger.debug("%s", command)
@@ -255,7 +269,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     out = commands.getoutput(command)
 
     if debug_mode_bpp:
-        logger.debug("%s\n%s", out, command)
+        logger.info("%s\n%s", out, command)
 
     info_filename = "%s/%s_%s_%s%s.infos" %(repest, name , c1, c2, suffix)
 
@@ -301,15 +315,14 @@ def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, ma
 
     if est_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
-    #else:
-        #
+    else:
+        command+=" modelA=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c1))
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 
     if allNodes:
         number_of_models +=1
-        if est_profiles.name in ["C10","C60"]:
-            command+=" model%s=\'$(modelA)\' " %(number_of_models)
+        command+=" model%s=\'$(modelA)\' " %(number_of_models)
         command+=" model%s.nodes_id=\'%s\' " %(number_of_models,"\'"+ ",".join(map(str, allNodes))+"\'")
 
     if gamma:
@@ -323,7 +336,7 @@ def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, ma
         logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
         sys.error(1)
 
-    command += " nonhomogeneous.number_of_models=%d " %(number_of_models)
+    command += " nonhomogeneous.number_of_models=%s " %(number_of_models)
 
     out = commands.getoutput(command)
 
@@ -356,7 +369,7 @@ output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
 
 ### estimation
 input.sequence.remove_saturated_sites=yes
-optimization.ignore_parameters=*
+optimization.ignore_parameters=* #BrLen*,Mixture.relproba1_Simple.V*,Mixture.relrate1*
 
 output.infos=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).infos
 output.estimates=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).params

@@ -35,6 +35,7 @@ from numpy.linalg import norm
 
 import bpp_lib
 
+AA_ORDERED = ["A","R","N","D","C","Q","E","G","H","I","L","K","M","F","P","S","T","W","Y","V"]
 
 class Profiles(object):
     def __init__(self,input_profiles, repbppconfig, prefix):
@@ -56,12 +57,14 @@ class Profiles(object):
             self.formatted_frequencies_filename = self.repbppconfig+'/'+self.prefix+'_freq_profiles.tsv'
             self.df = None
         else:
-            logger.error(" invalid choice: %s (choose from 10, 60 or a csv filename containing amino acid frequencies for each profil)", input_profiles)
+            logger.error(" invalid choice: %s (choose from C10, C60 or a csv filename containing amino acid frequencies for each profil)", input_profiles)
             sys.exit(1)
 
     def format_profile_file(self):
         try:
             self.df = pd.read_csv(self.filename, index_col = 0)
+            logger.warning("If some frequencies are equal to 0, they will be replace by 1e-12 in %(s).", self.filename)
+            self.df = self.df.replace(0, 1e-12)
             #check sum 1:
             sum_per_col = self.df.sum(axis=0)
             if not all([x == 1 for x in sum_per_col]):
@@ -70,9 +73,8 @@ class Profiles(object):
 
             # Check row names:
             index = list(self.df.index)
-            aa_ordered = ["A","R","N","D","C","Q","E","G","H","I","L","K","M","F","P","S","T","W","Y","V"]
-            if len(index) == 20 and set(index) == set(aa_ordered):
-                self.df.reindex(aa_ordered)
+            if len(index) == 20 and set(index) == set(AA_ORDERED):
+                self.df.reindex(AA_ORDERED)
             else:
                 self.df=pd.DataFrame()
             self.nb_cat = self.df.shape[1]
@@ -88,6 +90,13 @@ class Profiles(object):
             logger.error(str(exc))
             sys.exit(1)
 
+    def get_profile_name(self, C):
+        if self.name in ["C10","C60"]:
+            C_name = "C"+str(C)
+        else:
+            C_name = self.df.columns[C-1]
+        return(C_name)
+
     def calc_distances(self):
         if self.name in ["C10", "C60"]:
             if self.name == "C10":
@@ -98,9 +107,10 @@ class Profiles(object):
         else:
             self.dist_C1_C2 = pd.DataFrame(index=self.df.columns, columns=self.df.columns)
             for C1 in range(1,self.nb_cat+1):
+                C1_name = self.get_profile_name(C1)
+
                 for C2 in range(1,self.nb_cat+1):
-                    C1_name = self.df.columns[C1-1]
-                    C2_name = self.df.columns[C2-1]
+                    C2_name = self.get_profile_name(C2)
 
                     if C1 != C2:
                         d_C1_C2 = norm(self.df[C1_name].values - self.df[C2_name].values) # TO CHECK
@@ -115,12 +125,8 @@ class Profiles(object):
             for C1 in range(1,self.nb_cat+1):
                 for C2 in range(1,self.nb_cat+1):
                     if C1 != C2:
-                        if self.name in ["C10","C60"]:
-                            C1_name = "C"+str(C1)
-                            C2_name = "C"+str(C2)
-                        else:
-                            C1_name = self.df.columns[C1-1]
-                            C2_name = self.df.columns[C2-1]
+                        C1_name = self.get_profile_name(C1)
+                        C2_name = self.get_profile_name(C2)
                         d_C1_C2=self.dist_C1_C2.loc[C1_name,C2_name]
 
                         if d_C1_C2 >= min_dist:
@@ -138,13 +144,21 @@ class Profiles(object):
         return(self.dist_C1_C2)
 
     def get_dist(self,C1,C2):
-        if self.name in ["C10","C60"]:
-            C1_name = "C"+str(C1)
-            C2_name = "C"+str(C2)
-        else:
-            C1_name = self.df.columns[C1-1]
-            C2_name = self.df.columns[C2-1]
+        C1_name = self.get_profile_name(C1)
+        C2_name = self.get_profile_name(C2)
         return(self.dist_C1_C2.loc[C1_name,C2_name])
+
+    def format_freq_LG08(self,c):
+        res = []
+        c_name = self.df.columns[c-1]
+        for i in range(1,20):
+            aa_i = AA_ORDERED[i]
+            f = self.df.loc[aa_i,c_name]
+            if f == 0:
+                f = 1e-12
+            res.append("Full.theta%i=%s" %(i,str(f)))
+
+        return (",".join(res))
 
 def check_profiles(x_profiles, repbppconfig, prefix):
     profiles = Profiles(x_profiles,repbppconfig, prefix)

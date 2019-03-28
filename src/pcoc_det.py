@@ -121,6 +121,9 @@ AdvancedOptions.add_argument('--auto_trim_tree', action="store_true",
 AdvancedOptions.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
                     help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
                     default="C10")
+AdvancedOptions.add_argument('-p_conv', type=float, metavar="FLOAT [0,1]",
+                    help="Probability of a declared transition to be a convergent transition (in pcoc) (default: 1, all transitions must be seen)",
+                    default=1)
 AdvancedOptions.add_argument('--gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
@@ -213,7 +216,7 @@ NbCat_Est = est_profiles.nb_cat
 
 metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
 
-logger.info("Profile category uses during estimation:\t%s", NbCat_Est)
+logger.info("Profile category uses during estimation:\t%s\t%s", NbCat_Est, est_profiles.name)
 
 ############################
 # Bpp output configuration #
@@ -419,6 +422,11 @@ metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
 metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
 
 
+pcoc_relproba = args.p_conv
+if pcoc_relproba != 1:
+    logger.info("Run PCOC with pcoc_relproba:\t%s", pcoc_relproba)
+    metadata_run_dico["pcoc_p_conv"] = str(pcoc_relproba)
+
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
 pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
@@ -491,7 +499,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             logger.debug ("Estime e1: %s e2: %s", e1, e2)
             # Positif
             bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma, relproba=pcoc_relproba)
 
 
         ### post proba
