@@ -99,11 +99,9 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
         command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
         command+=" modelOC=\'OneChange(model=$(modelC))\' "
     else:
-        command+=" modelA=\'LG08+F(%s)\' " %(sim_profiles.format_freq_LG08(c1))
-        command+=" modelC=\'LG08+F(%s)\' " %(sim_profiles.format_freq_LG08(c2))
-        #command+=" modelA=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        #command+=" modelC=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
-        command+=" modelOC=\'OneChange(model=$(modelC))\' " #PROBLEM
+        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        command+=" modelOC=\'OneChange(model=$(modelC))\' "
 
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
@@ -139,23 +137,23 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                     number_of_models +=1
                     if sim_profiles.name in ["C10","C60"]:
                         sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
-                    #else:
-                        #
+                    else:
+                        sup_command+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
                     t_node = nodes[0]
                     sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,str(t_node))
                     if len(nodes) > 1:
                         number_of_models +=1
                         if sim_profiles.name in ["C10","C60"]:
                             sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                        #else:
-                            #
+                        else:
+                            sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
                         sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str,nodes[1:])))
                 else:
                     number_of_models +=1
                     if sim_profiles.name in ["C10","C60"]:
                         sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                    #else:
-                        #
+                    else:
+                        sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
                     sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodes)))
 
     command+=sup_command + " nonhomogeneous.number_of_models=%s " %(number_of_models)
@@ -207,13 +205,9 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
         command+=" modelOC=\'OneChange(model=$(modelC))\' "
     else:
-        command+=" modelA=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c1))
-        command+=" modelC=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c2))
-        command+=" modelOC=\'OneChange(model=$(modelC))\' " #PROBLEM
-        #command+=" modelA=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        #command+=" modelC=\'LG08+F(frequency=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
-        
-
+        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        command+=" modelOC=\'OneChange(model=$(modelC))\' "
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 
@@ -316,7 +310,7 @@ def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, ma
     if est_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
     else:
-        command+=" modelA=\'LG08+F(%s)\' " %(est_profiles.format_freq_LG08(c1))
+        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 

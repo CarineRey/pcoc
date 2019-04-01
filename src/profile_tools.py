@@ -63,7 +63,7 @@ class Profiles(object):
     def format_profile_file(self):
         try:
             self.df = pd.read_csv(self.filename, index_col = 0)
-            logger.warning("If some frequencies are equal to 0, they will be replace by 1e-12 in %(s).", self.filename)
+            logger.warning("If some frequencies are equal to 0, they will be replace by 1e-12 in (%s).", self.filename)
             self.df = self.df.replace(0, 1e-12)
             #check sum 1:
             sum_per_col = self.df.sum(axis=0)
@@ -147,18 +147,6 @@ class Profiles(object):
         C1_name = self.get_profile_name(C1)
         C2_name = self.get_profile_name(C2)
         return(self.dist_C1_C2.loc[C1_name,C2_name])
-
-    def format_freq_LG08(self,c):
-        res = []
-        c_name = self.df.columns[c-1]
-        for i in range(1,20):
-            aa_i = AA_ORDERED[i]
-            f = self.df.loc[aa_i,c_name]
-            if f == 0:
-                f = 1e-12
-            res.append("Full.theta%i=%s" %(i,str(f)))
-
-        return (",".join(res))
 
 def check_profiles(x_profiles, repbppconfig, prefix):
     profiles = Profiles(x_profiles,repbppconfig, prefix)
