@@ -29,13 +29,14 @@ import re
 import time
 import logging
 import math
+import multiprocessing
 
 import bpp_lib
 import events_placing
 import estim_data
 import profile_tools
 
-#import multiprocessing
+from scipy.misc import logsumexp
 
 import pandas as pd
 from ete3 import Tree
@@ -240,6 +241,8 @@ l_n_sites = []
 
 if os.path.isfile(ali_filename):
     ali = AlignIO.read(ali_filename, "fasta")
+    n_sites = ali.get_alignment_length()
+    nb_seq = len(ali)
     #check alphabet
     alphabet = {}
     error = {}
@@ -253,6 +256,7 @@ if os.path.isfile(ali_filename):
             else:
                 error.setdefault(letter,0)
                 error[letter]+=1
+    logger.info("Alignment: %s seqs %s sites", nb_seq, n_sites)
     logger.info("Alphabet usage:\n%s ", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  alphabet.items()]))
     if error:
         logger.error("Invalid character in the alignment: %s", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  error.items()]))
@@ -263,9 +267,6 @@ else:
 
 logger.info("alignment ok after checking")
 
-
-n_sites = ali.get_alignment_length()
-nb_seq = len(ali)
 
 #######################
 # Trees configuration #
@@ -423,12 +424,6 @@ metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC"]
 metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
 metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
 
-
-pcoc_relproba = args.p_conv
-if pcoc_relproba != 1:
-    logger.info("Run PCOC with pcoc_relproba:\t%s", pcoc_relproba)
-    metadata_run_dico["pcoc_p_conv"] = str(pcoc_relproba)
-
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
 <<<<<<< HEAD
@@ -458,6 +453,11 @@ def reorder_l(l, order):
         new_l[p] = l[i]
     return new_l
 
+def make_mixture(s):
+    c1,c2,g_tree = s
+    df_res = bpp_lib.make_estim_mixture(ali_basename, c1, c2, g_tree, est_profiles, suffix="_withMixture",  ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+    return (df_res)
+            
 def mk_detect(tree_filename, ali_basename, OutDirName):
     start_detec = time.time()
     metadata_simu_dico = {}
@@ -495,19 +495,39 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
             sys.exit(1)
 
-        c1 = 1  # useless but compatibility
-        c2 = 2  # useless but compatibility
-
         set_e1e2 = []
         for e1 in range(1, (NbCat_Est+1)):
             for e2 in range(1, (NbCat_Est+1)):
-                set_e1e2.append((e1,e2))
+                if e1 != e2:
+                    set_e1e2.append((e1,e2,g_tree))
+        
+        # Mixture
+        pool=multiprocessing.Pool(processes=3)
+        df_res_l = pool.map(make_mixture, set_e1e2)
+        df_mixture = pd.concat(df_res_l)
+        df_mixture.to_csv(prefix_out+".mixture.csv", index=False)
+        logger.info("\n%s",df_mixture)
+        logger.info("\n%s",prefix_out+".mixture.csv")
+        df_mixture = df_mixture.groupby(['Sites'])["P_LG_LMa","P_LG_LMpc","P_LG_LMpcoc"].aggregate(logsumexp).reset_index()
+        logger.info("\n%s",df_mixture)
+        df_mixture["Ma_vs_Mpc"]  = (df_mixture["P_LG_LMpc"] - df_mixture["P_LG_LMa"])
+        df_mixture["Ma_vs_Mpcoc"] = (df_mixture["P_LG_LMpcoc"] - df_mixture["P_LG_LMa"])
+        df_mixture["Sites"] = pd.to_numeric(df_mixture["Sites"])
+        df_mixture = df_mixture[["Sites","Ma_vs_Mpc","Ma_vs_Mpcoc","P_LG_LMa","P_LG_LMpc","P_LG_LMpcoc"]].sort_values(by=['Sites'])
+        df_mixture.to_csv(prefix_out+".mixture.csv", index=False)
+        logger.info("\n%s",df_mixture)
+
+        # PCOC V1
+        set_e1e2 = []
+        for e1 in range(1, (NbCat_Est+1)):
+            for e2 in range(1, (NbCat_Est+1)):
+                    set_e1e2.append((e1,e2))
+
         for (e1,e2) in set_e1e2:
             logger.debug ("Estime e1: %s e2: %s", e1, e2)
             # Positif
             bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma, relproba=pcoc_relproba)
-
+            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
 
         ### post proba
         res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, est_profiles, set_e1e2=set_e1e2, ID=date)

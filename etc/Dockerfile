@@ -71,14 +71,8 @@ RUN git clone https://github.com/BioPP/bpp-popgen . &&\
     (make -j 4 || make) && \
     make install
 
-<<<<<<< HEAD
 ENV bpp_phyl_version=266d544
 #78d0235 -> #4bbd6b1 -> #266d544
-=======
-
-ENV bpp_phyl_version=1dcc52c
-#78d0235 -> #1dcc52c
->>>>>>> b0d82f1... update frequencies setting in LG08+F
 
 WORKDIR $bpp_dir/sources/bpp-phyl
 RUN git clone  https://github.com/BioPP/bpp-phyl . &&\

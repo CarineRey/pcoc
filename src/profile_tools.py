@@ -67,8 +67,8 @@ class Profiles(object):
             self.df = self.df.replace(0, 1e-12)
             #check sum 1:
             sum_per_col = self.df.sum(axis=0)
-            if not all([x == 1 for x in sum_per_col]):
-                logger.warning("Columns do not sum to 1 in %s, normalisation will be done.\n%s", self.filename,sum_per_col)
+            if not all([x == 1.0 for x in sum_per_col]):
+                logger.warning("Columns do not sum to 1 in %s, normalisation will be done.\n%s", self.filename,sum_per_col.to_string())
                 self.df = self.df.div(sum_per_col, axis=1)
 
             # Check row names:
