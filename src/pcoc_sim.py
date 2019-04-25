@@ -443,13 +443,6 @@ topo_str = "No"
 ident_str = "No"
 if args.pcoc:
     pcoc_str = "Yes"
-    pcoc_relproba = args.p_conv
-    if pcoc_relproba != 1:
-        logger.info("Run PCOC with pcoc_relproba:\t%s", pcoc_relproba)
-        metadata_run_dico["pcoc_p_conv"] = str(pcoc_relproba)
-    if pcoc_relproba > 1 or pcoc_relproba < 0:
-        logger.error("p_conv must be in [0, 1] (%s)", pcoc_relproba)
-        sys.exit(1)
 if args.topo:
     topo_str = "Yes"
 if args.ident:
@@ -633,11 +626,11 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             if args.pcoc:
                 # Test optimal
                 # Positif
-                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
-                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
+                bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameAC, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
                 # Negatif
-                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
-                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True, relproba=pcoc_relproba)
+                bpp_lib.make_estim(nameA, c1, c1, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
+                bpp_lib.make_estim(nameA, c1, c2, g_tree, sim_profiles, suffix="_opt_withOneChange", OneChange=True)
                 # Test optimal No One Change
                 # Positif
                 bpp_lib.make_estim(nameAC, c1, c1, g_tree, sim_profiles, suffix="_opt_noOneChange", OneChange=False)
@@ -658,26 +651,25 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
                 for e1 in range(1, (NbCat_Est+1)):
                     for e2 in range(1, (NbCat_Est+1)):
                         set_e1e2.append((e1,e2))
-                        #e2=1
                         if (e1 == e2) and (args.topo or args.pcoc):
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
                             bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
+                                bpp_lib.make_estim(nameAC, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
                             # Negatif
                             bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
                             if args.pcoc:
-                                bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
+                                bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
 
                         if (e1 != e2) and args.pcoc:
                             logger.debug ("Estime e1: %s e2: %s", e1, e2)
                             # Positif
                             bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
-                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, relproba=pcoc_relproba)
+                            bpp_lib.make_estim(nameAC, e1 , e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True)
                             # Negatif
                             bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False)
-                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange = True, relproba=pcoc_relproba)
+                            bpp_lib.make_estim(nameA, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange = True)
 
                 if args.pcoc:
                     ### Calcul VP FP FN VN Model het

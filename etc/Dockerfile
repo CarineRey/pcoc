@@ -91,7 +91,8 @@ RUN git clone https://github.com/BioPP/bppsuite . &&\
     (make -j 4 || make) && \
     make install
 
-
+RUN pip install scipy
+WORKDIR /data
 COPY data/* /data/
 COPY README.md /usr/local/etc/
 COPY etc/entrypoint.sh /usr/local/bin/entrypoint.sh
