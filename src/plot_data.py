@@ -38,6 +38,8 @@ import logging
 logger = logging.getLogger("pcoc.plot_data")
 
 
+MODELS_L = ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc", "p_Mpc", "p_Ma", "PCOC", "PC", "OC", "Topological", "Identical"]
+
 #### SequencePlotFace methods modification
 class SequencePlotFace_mod(faces.SequencePlotFace):
     def draw_x_axis(self):
@@ -343,7 +345,7 @@ class SequenceScoreFace(StaticItemFace):
 
         # Y axes and colo rect
         yi = -1
-        for model in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+        for model in MODELS_L:
             if self.dict_values_pcoc.has_key(model):
                 yi += 1
                 y = yi * self.col_w
@@ -612,7 +614,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
 
 
     ### Histogram up
-    if hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+    if hist_up in MODELS_L:
         header_hist_value_up = 'Posterior probability (' + hist_up.upper() +' model)'
         hist_value_up = dict_benchmark[hist_up]
         # Define emphased lines
@@ -649,7 +651,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
     sequencescorebox.hp = hp
     sequencescorebox.x_values = x_values_up
     sequencescorebox.x_inter_values = inter
-    if not hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+    if not hist_up in MODELS_L:
         sequencescorebox.x_axis=True
 
     phylotree_style.aligned_header.add_face(sequencescorebox, 1)

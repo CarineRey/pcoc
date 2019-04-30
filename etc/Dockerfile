@@ -71,8 +71,14 @@ RUN git clone https://github.com/BioPP/bpp-popgen . &&\
     (make -j 4 || make) && \
     make install
 
+<<<<<<< HEAD
 ENV bpp_phyl_version=266d544
 #78d0235 -> #4bbd6b1 -> #266d544
+=======
+
+ENV bpp_phyl_version=6b419d1 
+#78d0235 -> #6b419d1 
+>>>>>>> d082775... end refactoring for pcoc V2, now to be tested
 
 WORKDIR $bpp_dir/sources/bpp-phyl
 RUN git clone  https://github.com/BioPP/bpp-phyl . &&\
