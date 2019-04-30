@@ -37,9 +37,8 @@ import plot_data
 import estim_data
 import profile_tools
 
-from scipy.misc import logsumexp
-
 import pandas as pd
+import numpy  as np
 from ete3 import Tree
 
 from Bio import AlignIO, SeqIO, Seq, SeqRecord
@@ -406,21 +405,24 @@ if not (0 <= args.max_gap_allowed <= 100):
 p_filter_threshold = args.filter_t
 
 dict_p_filter_threshold = {}
-dict_p_filter_threshold["PCOC"] = p_filter_threshold
-dict_p_filter_threshold["PC"] = p_filter_threshold
-dict_p_filter_threshold["OC"] = p_filter_threshold
+dict_p_filter_threshold["PCOC_V1"] = p_filter_threshold
+dict_p_filter_threshold["PC_V1"] = p_filter_threshold
+dict_p_filter_threshold["OC_V1"] = p_filter_threshold
+dict_p_filter_threshold["p_Mpcoc"] = p_filter_threshold
+dict_p_filter_threshold["p_Mpc"] = p_filter_threshold
+dict_p_filter_threshold["p_Ma"] = p_filter_threshold
 
 if args.filter_t_pcoc >= 0:
-    dict_p_filter_threshold["PCOC"] = args.filter_t_pcoc
+    dict_p_filter_threshold["PCOC_V1"] = args.filter_t_pcoc
 if args.filter_t_pc >= 0:
-    dict_p_filter_threshold["PC"] = args.filter_t_pc
+    dict_p_filter_threshold["PC_V1"] = args.filter_t_pc
 if args.filter_t_oc >= 0:
-    dict_p_filter_threshold["OC"] = args.filter_t_oc
+    dict_p_filter_threshold["OC_V1"] = args.filter_t_oc
 
 
-metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC"]
-metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
-metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
+metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC_V1"]
+metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC_V1"]
+metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC_V1"]
 
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
@@ -446,11 +448,20 @@ def reorder_l(l, order):
         new_l[p] = l[i]
     return new_l
 
-def make_mixture(s):
-    c1,c2,g_tree = s
-    df_res = bpp_lib.make_estim_mixture(ali_basename, c1, c2, g_tree, est_profiles, suffix="_withMixture",  ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+def make_estim_mixture(s):
+    e1, e2,g_tree = s
+    df_res = bpp_lib.make_estim_mixture(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withMixture",  ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
     return (df_res)
-            
+
+def make_estim(s):
+    e1, e2, g_tree, OneChange = s
+    if OneChange:
+        suffix = "_withOneChange"
+    else:
+        suffix = "_noOneChange"
+    df_res = bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix=suffix,  OneChange=OneChange, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+    return (df_res)
+
 def mk_detect(tree_filename, ali_basename, OutDirName):
     start_detec = time.time()
     metadata_simu_dico = {}
@@ -479,11 +490,6 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         metadata_simu_dico["allbranchlength"] = allbranchlength
         metadata_simu_dico["convbranchlength"] = convbranchlength
 
-
-        l_TPFPFNTN_mod_het = []
-        l_TPFPFNTN_topo = []
-        l_TPFPFNTN_obs_sub = []
-
         if not os.path.isfile(g_tree.repseq + "/" + ali_basename):
             logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
             sys.exit(1)
@@ -495,45 +501,34 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                     set_e1e2.append((e1,e2,g_tree))
         
         # Mixture
-        pool=multiprocessing.Pool(processes=3)
-        df_res_l = pool.map(make_mixture, set_e1e2)
-        df_mixture = pd.concat(df_res_l)
-        df_mixture.to_csv(prefix_out+".mixture.csv", index=False)
-        logger.info("\n%s",df_mixture)
-        logger.info("\n%s",prefix_out+".mixture.csv")
-        df_mixture = df_mixture.groupby(['Sites'])["P_LG_LMa","P_LG_LMpc","P_LG_LMpcoc"].aggregate(logsumexp).reset_index()
-        logger.info("\n%s",df_mixture)
-        df_mixture["Ma_vs_Mpc"]  = (df_mixture["P_LG_LMpc"] - df_mixture["P_LG_LMa"])
-        df_mixture["Ma_vs_Mpcoc"] = (df_mixture["P_LG_LMpcoc"] - df_mixture["P_LG_LMa"])
-        df_mixture["Sites"] = pd.to_numeric(df_mixture["Sites"])
-        df_mixture = df_mixture[["Sites","Ma_vs_Mpc","Ma_vs_Mpcoc","P_LG_LMa","P_LG_LMpc","P_LG_LMpcoc"]].sort_values(by=['Sites'])
-        df_mixture.to_csv(prefix_out+".mixture.csv", index=False)
-        logger.info("\n%s",df_mixture)
+        Mixture = True
+        if Mixture:
+            pool = multiprocessing.Pool(processes=3)
+            df_res_mixture_l = pool.map(make_estim_mixture, set_e1e2)
+            pool.close()
+            pool.join()
+
+            df_mixture_raw = pd.concat(df_res_mixture_l)
+            df_mixture = estim_data.calc_p_from_mixture(df_mixture_raw)
+        else:
+            df_mixture = pd.DataFrame()
 
         # PCOC V1
         set_e1e2 = []
         for e1 in range(1, (NbCat_Est+1)):
             for e2 in range(1, (NbCat_Est+1)):
-                    set_e1e2.append((e1,e2))
-
-        for (e1,e2) in set_e1e2:
-            logger.debug ("Estime e1: %s e2: %s", e1, e2)
-            # Positif
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_noOneChange",  OneChange=False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withOneChange",  OneChange=True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-
-        ### post proba
-        res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, est_profiles, set_e1e2=set_e1e2, ID=date)
-        l_TPFPFNTN_mod_het.extend(res)
-
-        for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
-            if bilan[12].has_key(p):
-                del bilan[12][p]
-
-        dict_values_pcoc = {}
-        dict_values_pcoc["PCOC"] = bilan[12]["p_mean_X_OXY"]
-        dict_values_pcoc["PC"] = bilan[12]["p_mean_X_XY"]
-        dict_values_pcoc["OC"] = bilan[12]["p_mean_X_OX"]
+                #with_OneChange
+                set_e1e2.append((e1,e2,g_tree, True))
+                #without_OneChange
+                set_e1e2.append((e1,e2,g_tree, False))
+        
+        pool = multiprocessing.Pool(processes=3)
+        df_res_l = pool.map(make_estim, set_e1e2)
+        pool.close()
+        pool.join()
+        
+        df_V1_raw = pd.concat(df_res_l)
+        df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
 
         ### Get indel prop
         prop_indel = [0]*n_sites
@@ -546,18 +541,48 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                     if sp_conv:
                         prop_indel_conv[i]  +=1
 
+        ### Table
+        #### complete:
+        all_pos = range(1, n_sites +1)
+
+        df_bilan = pd.DataFrame({"Sites":all_pos})
+
+        df_bilan["Indel_prop"] = prop_indel
+        df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
+
+        df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
+        df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
+
+        if not df_mixture.empty:
+            df_bilan = pd.merge(df_bilan, df_mixture, on = "Sites")
+        
+        if not df_V1.empty:
+            df_bilan = pd.merge(df_bilan, df_V1, on = "Sites")
+        
+        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1","p_Mpcoc", "p_Mpc", "p_Ma"]]
+        df_bilan = df_bilan[col_bilan]
+
+
+        dict_values_pcoc = {}
+        for m in ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc", "p_Mpc", "p_Ma"]:
+            if m in df_bilan.columns:
+                dict_values_pcoc[m] = df_bilan[m].values
+        
+        models = dict_values_pcoc.keys()
+        logger.info(dict_values_pcoc)
+        
+
 
         # filter position:
 
         bilan_f = {}
-        all_pos = range(1, n_sites +1)
 
         # filter on indel prop:
         t_indel = args.max_gap_allowed_in_conv_leaves * float(g_tree.numberOfConvLeafs)
         all_pos_without_indel_sites = [ p for p in all_pos if prop_indel_conv[p-1] < t_indel ]
 
         dict_pos_filtered = {}
-        for model in ["PCOC", "PC", "OC"]:
+        for model in models:
             dict_pos_filtered[model] = [p for p in all_pos_without_indel_sites if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
             if positions_to_highlight:
                 dict_pos_filtered[model].extend(positions_to_highlight)
@@ -571,10 +596,10 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         dict_pos_filtered["union"] = all_filtered_position
 
         if args.reorder:
-            for model in ["PCOC", "PC", "OC", "union"]:
+            for model in models + ["union"]:
                 m_list = [model]
                 if model == "union":
-                    m_list = ["PCOC", "PC", "OC"]
+                    m_list = models
                 nb_filtered_pos = len(dict_pos_filtered[model])
                 new_order = [0]*nb_filtered_pos
                 j = 0
@@ -609,7 +634,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
         # filtered ali:
         ## Per model
-        for model in ["PCOC", "PC", "OC", "union"]:
+        for model in models + ["union"]:
             filtered_ali = []
             for seq in ali:
                 new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
@@ -623,15 +648,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
         ## Output
 
-        ### Table
-        #### complete:
-        df_bilan = pd.DataFrame.from_dict(dict_values_pcoc, orient='columns', dtype=None)
-        df_bilan["Sites"] = all_pos
-        df_bilan["Indel_prop"] = prop_indel
-        df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
-        df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
-        df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
-        df_bilan = df_bilan[["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC", "PC","OC"]]
+            
         #### filtered:
         df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
         df_bilan_f = df_bilan_f.copy()
@@ -648,7 +665,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 if args.svg:
                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
 
-            for model in ["PCOC", "PC", "OC"]:
+            for model in models:
                 if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
                     dict_values_pcoc_filtered_model = {}
                     for (key, val) in dict_values_pcoc.items():

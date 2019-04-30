@@ -22,8 +22,14 @@
 import math
 import os
 import re
+import numpy as np
+import pandas as pd
+
+from scipy.misc import logsumexp
+
 from Bio import AlignIO
 from ete3 import Tree
+
 import logging
 logger = logging.getLogger("pcoc.estim_data")
 
@@ -334,6 +340,55 @@ def dico_typechg(C1,C2, name_AC, g_tree, est_profiles, sim_profiles, n_sites=100
             res.append(tab)
 
     return res, bilan
+
+def calc_p_from_mixture(df_mixture):
+    df_mixture = df_mixture.groupby(['Sites'])["lnl_Ma","lnl_Mpc","lnl_Mpcoc"].aggregate(logsumexp).reset_index()
+
+    df_mixture = df_mixture[["Sites","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
+
+    df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]] = df_mixture[["lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].apply(np.exp)
+
+    sum_per_row = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].sum(axis=1)
+    df_mixture[["p_Ma","p_Mpc","p_Mpcoc"]] = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].div(sum_per_row, axis=0)
+
+    df_mixture = df_mixture[["Sites","p_Ma","p_Mpc","p_Mpcoc","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
+    return(df_mixture)
+
+
+def calc_p_from_V1(df_V1_prep):
+    """equivalent to dico_typechg_het_det"""
+
+    df_V1_prep["Model"] = "X"
+    df_V1_prep.loc[(df_V1_prep.C1 == df_V1_prep.C2) & df_V1_prep.OneChange, "Model"] = "OX"
+    df_V1_prep.loc[(df_V1_prep.C1 != df_V1_prep.C2) & df_V1_prep.OneChange, "Model"] = "OXY"
+    df_V1_prep.loc[(df_V1_prep.C1 != df_V1_prep.C2) & (~ df_V1_prep.OneChange), "Model"] = "XY"
+    df_V1_prep.loc[(df_V1_prep.C1 == df_V1_prep.C2) & (~ df_V1_prep.OneChange), "Model"] = "X"
+    agg_funcs = {"lnl":{"lnl_max":np.max, "lnl_mean": lambda x: logsumexp(x, b=1/float(len(x)))}}
+    df_V1_prep = df_V1_prep[['Sites', 'lnl',  'Model']].groupby(['Sites', 'Model']).agg(agg_funcs).reset_index(col_level = 1)
+    df_V1_prep.columns = df_V1_prep.columns.get_level_values(1)
+
+    df_V1_prep = df_V1_prep.pivot_table(index=['Sites'], columns='Model', values=['lnl_mean', 'lnl_max'])
+    df_V1_prep.columns = ["%s_%s" %(x,y) for x,y in df_V1_prep.columns]
+    df_V1_prep = df_V1_prep.reset_index()
+
+    for model_type in ["max","mean"]:
+        for model_couple in [("X","OX"), ("X","XY"), ("X","OXY"), ("OX","OXY"), ("XY","OXY")]:
+            #df_V1_2["p_max_X_OX"] = df_V1_2.apply(lambda x: np.exp(x["lnl_max_X"]-x["lnl_max_OX"])/(np.exp(x["lnl_max_X"]-x["lnl_max_OX"])+1), axis = 1)
+            m_name1 = model_couple[0]
+            m_name2 = model_couple[1]
+            p_name = "p_%s_%s_%s" %(model_type, m_name1, m_name2)
+            c_name1 = "lnl_%s_%s" %(model_type, m_name1)
+            c_name2 = "lnl_%s_%s" %(model_type, m_name2)
+            df_V1_prep[p_name] = df_V1_prep.apply(lambda x: np.exp(x[c_name2]-x[c_name1])/(np.exp(x[c_name2]-x[c_name1])+1), axis = 1)
+
+    df_V1 = df_V1_prep [["Sites", "p_mean_X_OXY", "p_mean_X_XY", "p_mean_X_OX"]]
+    df_V1.columns = ["Sites", "PCOC_V1", "PC_V1", "OC_V1"]
+
+    return(df_V1)
+
+
+
+
 
 def dico_typechg_het_det(ali_filename, g_tree, est_profiles, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents

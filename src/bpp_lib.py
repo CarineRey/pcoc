@@ -272,6 +272,24 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         logger.error("%s does not exist", output_infos)
         logger.error("command: %s\nout:\n%s", command, out)
         sys.exit(42)
+        
+    ### Read outputs ###
+    logger.info("Read and save likelihoods (%s, %s)", c1, c2)
+    ## bppml ##
+    df_bppml = pd.read_csv(output_infos, sep = '\s+', names = ["Sites", "is.complete", "is.constant", "lnl", "rc", "pr"], header = 0)
+    logger.debug("bppml: %s", df_bppml.to_string() )
+    
+    df_bppml = df_bppml[["Sites", "lnl"]]
+    df_bppml["C1"] = c1
+    df_bppml["C2"] = c2
+    df_bppml["OneChange"] = OneChange
+    df_bppml["T_C1"] = None
+    df_bppml["T_C2"] = None
+    df_bppml["Sites"] = df_bppml["Sites"].str.replace("[","").str.replace("]","")
+    df_bppml[["Sites", "lnl"]]
+    df_bppml["Sites"] = pd.to_numeric(df_bppml["Sites"])
+    
+    return(df_bppml)
 
 def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
                ext=".fa", gamma=False,
@@ -403,7 +421,7 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
 
 
     ### Read outputs ###
-    logger.info("Read and save likelihoods (%s, %s)", c1, c2)
+    logger.info("Read and save likelihoods (mixture) (%s, %s)", c1, c2)
     ## bppml ##
     df_bppml = pd.read_csv(output_infos_bppml, sep = '\s+', names = ["Sites", "is.complete", "is.constant", "LG", "rc", "pr"], header = 0)
     logger.debug("bppml: %s", df_bppml.to_string() )
@@ -412,14 +430,15 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
     logger.debug("bppmixedlikelihoods: %s", df_bppmixedl.to_string() )
     
     df_c1c2 = pd.merge(df_bppml[["Sites", "LG"]], df_bppmixedl, on = "Sites")
-    
-    df_c1c2["P_LG_LMa"] = df_c1c2["LG"] + df_c1c2["LMa"] #(product of ln * -> +)
-    df_c1c2["P_LG_LMpc"] = df_c1c2["LG"] + df_c1c2["LMpc"]
-    df_c1c2["P_LG_LMpcoc"] = df_c1c2["LG"] + df_c1c2["LMpcoc"]
+
+    df_c1c2["lnl_Ma"] = df_c1c2["LG"] + df_c1c2["LMa"]  #(product of ln * -> +)
+    df_c1c2["lnl_Mpc"] = df_c1c2["LG"] + df_c1c2["LMpc"]
+    df_c1c2["lnl_Mpcoc"] = df_c1c2["LG"] + df_c1c2["LMpcoc"]
     
     df_c1c2["C1"] = c1
     df_c1c2["C2"] = c2
     df_c1c2["Sites"] = df_c1c2["Sites"].str.replace("[","").str.replace("]","")
+    df_c1c2["Sites"] = pd.to_numeric(df_c1c2["Sites"])
     
     return(df_c1c2)
 

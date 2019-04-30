@@ -70,8 +70,8 @@ RUN git clone https://github.com/BioPP/bpp-popgen . &&\
     make install
 
 
-ENV bpp_phyl_version=fd4dc69
-#78d0235 -> #fd4dc69
+ENV bpp_phyl_version=6b419d1 
+#78d0235 -> #6b419d1 
 
 WORKDIR $bpp_dir/sources/bpp-phyl
 RUN git clone  https://github.com/BioPP/bpp-phyl . &&\
