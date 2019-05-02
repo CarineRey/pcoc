@@ -35,27 +35,27 @@ $DOCKER_CMD pcoc_num_tree.py -t $tree -o $PWD/data/num_tree.pdf
 $DOCKER_CMD pcoc_num_tree.py -t $tree -o $PWD/data/colored_num_tree.pdf -m 0/3
 
 ## Then run pcoc_det on your alignment uding the tree and the scenario
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3
 
 ## Then run pcoc_det on your alignment using the annotated tree
-$DOCKER_CMD pcoc_det.py -t $tree_with_cond -aa $ali -o $PWD/output_pcoc_det -m "-"
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree_with_cond -aa $ali -o $PWD/output_pcoc_det -m "-"
 
 ## Then run pcoc_det on your alignment
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --gamma
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --gamma
 
 ## if you want to have a nice plot of the sites detected as convergent you can use the option --plot with or without the option --reorder
 ## With the --reorder option:
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
+$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
 ## Without the --reorder option:
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
 ## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder -plot_title "Test PCOC"
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma -plot_title "Test PCOC"
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma -plot_title "Test PCOC"
 
 
 ## another example with several convergent branches, with OC applied on branches 11, 6, and 15, and PC applied on all of 11,9,10,6,15:
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py  -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC"
 
 
 ## Test with lacking seqs:
@@ -63,5 +63,5 @@ ali=$PWD/data/SLC26A5.fasta
 ali_trim=$PWD/data/SLC26A5_trim.fasta
 
 tail -n 56  $ali > $ali_trim #remove elephant (15)
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali_trim -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC" --auto_trim_tree
+$DOCKER_CMD pcoc_det.py -cpu 2 --V1 -t $tree -aa $ali_trim -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC" --auto_trim_tree
 
