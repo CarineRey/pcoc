@@ -55,9 +55,9 @@ parser = argparse.ArgumentParser(prog="pcoc_det.py",
 parser.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 
 parser._optionals.title = "MISCELLANEOUS"
-#parser.add_argument('-cpu', type=int,
-#                    help="Number of cpu to use. (default: 1)",
-#                    default=1)
+parser.add_argument('-cpu', type=int,
+                    help="Number of cpu to use. (default: 1)",
+                    default=1)
 
 ##############
 requiredOptions = parser.add_argument_group('REQUIRED OPTIONS')
@@ -138,6 +138,12 @@ AdvancedOptions.add_argument('--max_gap_allowed_in_conv_leaves', type=int,
 AdvancedOptions.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
                     default=False)
+AdvancedOptions.add_argument('--V1', action="store_true",
+                    help="Run also PCOC V1.",
+                    default=False)
+AdvancedOptions.add_argument('--no_mixture', action="store_true",
+                    help="Do not run PCOC mixture (V2).",
+                    default=False)
 AdvancedOptions.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
                    help="Redefine the LD_LIBRARY_PATH env variable, bppsuite library must be present in the $PATH and in the LD_LIBRARY_PATH")
 AdvancedOptions.add_argument('--debug', action="store_true",
@@ -166,6 +172,8 @@ OutDirName = OutDirName.replace("//","/")
 
 
 metadata_run_dico["date"] = date
+metadata_run_dico["V1"] = args.V1
+metadata_run_dico["V2"] = not args.no_mixture
 
 ### Set up the output directory
 if os.path.isdir(OutDirName):
@@ -208,6 +216,13 @@ repbppconfig = OutDirName + "bpp_config"
 if not os.path.exists(repbppconfig):
     os.mkdir(repbppconfig)
 
+cpu = args.cpu
+try:
+    cpus = multiprocessing.cpu_count()
+except NotImplementedError:
+    cpus = 1   # arbitrary default
+logger.info("%s on %s cpus", cpu, cpus)
+
 ##########################
 # Profiles configuration #
 ##########################
@@ -233,7 +248,7 @@ bpp_lib.write_global_config(repbppconfig, estim=True)
 #####################
 
 
-logger.info("alignment: %s", args.ali)
+logger.info("Alignment: %s", args.ali)
 ali_filename = args.ali
 
 l_n_sites = []
@@ -410,6 +425,7 @@ dict_p_filter_threshold = {}
 dict_p_filter_threshold["PCOC_V1"] = p_filter_threshold
 dict_p_filter_threshold["PC_V1"] = p_filter_threshold
 dict_p_filter_threshold["OC_V1"] = p_filter_threshold
+dict_p_filter_threshold["p_Mpcoc+pc"] = p_filter_threshold
 dict_p_filter_threshold["p_Mpcoc"] = p_filter_threshold
 dict_p_filter_threshold["p_Mpc"] = p_filter_threshold
 dict_p_filter_threshold["p_Ma"] = p_filter_threshold
@@ -422,9 +438,13 @@ if args.filter_t_oc >= 0:
     dict_p_filter_threshold["OC_V1"] = args.filter_t_oc
 
 
-metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC_V1"]
-metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC_V1"]
-metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC_V1"]
+metadata_run_dico["pp_threshold_PCOC_V1"] = dict_p_filter_threshold["PCOC_V1"]
+metadata_run_dico["pp_threshold_PC_V1"] = dict_p_filter_threshold["PC_V1"]
+metadata_run_dico["pp_threshold_OC_V1"] = dict_p_filter_threshold["OC_V1"]
+metadata_run_dico["pp_threshold_p_Mpcoc+pc"] = dict_p_filter_threshold["p_Mpcoc+pc"]
+metadata_run_dico["pp_threshold_p_Mpcoc"] = dict_p_filter_threshold["p_Mpcoc"]
+metadata_run_dico["pp_threshold_p_Mpc"] = dict_p_filter_threshold["p_Mpc"]
+metadata_run_dico["pp_threshold_p_Ma"] = dict_p_filter_threshold["p_Ma"]
 
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
@@ -506,11 +526,11 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             for e2 in range(1, (NbCat_Est+1)):
                 if e1 != e2:
                     set_e1e2.append((e1,e2,g_tree))
-        
+
         # Mixture
-        Mixture = True
+        Mixture = not args.no_mixture
         if Mixture:
-            pool = multiprocessing.Pool(processes=3)
+            pool = multiprocessing.Pool(processes=cpu)
             df_res_mixture_l = pool.map(make_estim_mixture, set_e1e2)
             pool.close()
             pool.join()
@@ -521,21 +541,25 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             df_mixture = pd.DataFrame()
 
         # PCOC V1
-        set_e1e2 = []
-        for e1 in range(1, (NbCat_Est+1)):
-            for e2 in range(1, (NbCat_Est+1)):
-                #with_OneChange
-                set_e1e2.append((e1,e2,g_tree, True))
-                #without_OneChange
-                set_e1e2.append((e1,e2,g_tree, False))
-        
-        pool = multiprocessing.Pool(processes=3)
-        df_res_l = pool.map(make_estim, set_e1e2)
-        pool.close()
-        pool.join()
-        
-        df_V1_raw = pd.concat(df_res_l)
-        df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
+        PCOC_V1 = args.V1
+        if PCOC_V1:
+            set_e1e2 = []
+            for e1 in range(1, (NbCat_Est+1)):
+                for e2 in range(1, (NbCat_Est+1)):
+                    #with_OneChange
+                    set_e1e2.append((e1,e2,g_tree, True))
+                    #without_OneChange
+                    set_e1e2.append((e1,e2,g_tree, False))
+
+            pool = multiprocessing.Pool(processes=cpu)
+            df_res_l = pool.map(make_estim, set_e1e2)
+            pool.close()
+            pool.join()
+
+            df_V1_raw = pd.concat(df_res_l)
+            df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
+        else:
+            df_V1 = pd.DataFrame()
 
         ### Get indel prop
         prop_indel = [0]*n_sites
@@ -562,23 +586,20 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
         if not df_mixture.empty:
             df_bilan = pd.merge(df_bilan, df_mixture, on = "Sites")
-        
+
         if not df_V1.empty:
             df_bilan = pd.merge(df_bilan, df_V1, on = "Sites")
-        
-        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1","p_Mpcoc", "p_Mpc", "p_Ma"]]
+
+        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc", "p_Mpcoc", "p_Mpc", "p_Ma"]]
         df_bilan = df_bilan[col_bilan]
 
 
         dict_values_pcoc = {}
-        for m in ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc", "p_Mpc", "p_Ma"]:
+        for m in ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc","p_Mpcoc", "p_Mpc", "p_Ma"]:
             if m in df_bilan.columns:
                 dict_values_pcoc[m] = df_bilan[m].values
-        
-        models = dict_values_pcoc.keys()
-        logger.info(dict_values_pcoc)
-        
 
+        models = dict_values_pcoc.keys()
 
         # filter position:
 
@@ -641,21 +662,22 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
         # filtered ali:
         ## Per model
-        for model in models + ["union"]:
-            filtered_ali = []
-            for seq in ali:
-                new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
-                filtered_ali.append(new_seq)
-            SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
-            if model == "union":
-                modelstr = "union"
-            else:
-                modelstr = model
-            logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
+        if models:
+            for model in models + ["union"]:
+                filtered_ali = []
+                for seq in ali:
+                    new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
+                    filtered_ali.append(new_seq)
+                SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
+                if model == "union":
+                    modelstr = "union"
+                else:
+                    modelstr = model
+                logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
 
         ## Output
 
-            
+
         #### filtered:
         df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
         df_bilan_f = df_bilan_f.copy()
@@ -666,7 +688,7 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
 
         ### Plot
-        if args.plot:
+        if args.plot and models:
             if args.plot_complete_ali:
                 plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
                 if args.svg:
