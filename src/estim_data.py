@@ -350,8 +350,10 @@ def calc_p_from_mixture(df_mixture):
 
     sum_per_row = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].sum(axis=1)
     df_mixture[["p_Ma","p_Mpc","p_Mpcoc"]] = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].div(sum_per_row, axis=0)
+    
+    df_mixture["p_Mpcoc+pc"] = df_mixture["p_Mpcoc"] + df_mixture["p_Mpc"]
 
-    df_mixture = df_mixture[["Sites","p_Ma","p_Mpc","p_Mpcoc","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
+    df_mixture = df_mixture[["Sites","p_Ma","p_Mpc","p_Mpcoc","p_Mpcoc+pc","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
     return(df_mixture)
 
 
