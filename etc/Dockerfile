@@ -81,8 +81,8 @@ RUN git clone  https://github.com/BioPP/bpp-phyl . &&\
     make install
 
 
-ENV bppsuite_version=3eb7b0b
-#77ccc0a -> #3eb7b0b
+ENV bppsuite_version=be18fc9
+#77ccc0a -> #be18fc9
 
 WORKDIR $bpp_dir/sources/bppsuite
 RUN git clone https://github.com/BioPP/bppsuite . &&\

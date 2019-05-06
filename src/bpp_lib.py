@@ -54,6 +54,30 @@ def write_global_config(d, estim=True, sim_profiles_name=""):
 
         with open(d+"/"+f, "w") as F:
             F.write(s)
+            
+            
+def get_proba_and_lnl_M(out_bppmixedl_str):
+    M_l = ["Ma", "Mpc", "Mpcoc"]
+    res = {m:{} for m in M_l}
+    line_l = out_bppmixedl_str.split("\n")
+    i = 0
+    M = 0
+    while i< len(line_l):
+        line = line_l[i]
+        line = line.strip()
+        if re.match("Model .*_[0-9]:", line):
+            lnl = line_l[i+1]
+            lnl = re.sub("Log likelihood[\.]*:","",lnl).strip()
+            proba = line_l[i+2]
+            proba = re.sub("Probability[\.]*:","",proba).strip()
+            res[M_l[M]] = {"lnl": -1 * float(lnl), "P":float(proba)}
+            i+=2
+            M+=1
+        i+=1
+    
+    df = pd.DataFrame(res)
+    return(df)
+    
 
 
 ########################################################################
@@ -92,7 +116,7 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
         if not os.path.isfile(sim_profiles.formatted_frequencies_filename):
             logger.error("%s is not a file", sim_profiles.formatted_frequencies_filename)
         command += " PROFILE_F=%s " %(sim_profiles.formatted_frequencies_filename)
-    
+
     command+=" param=%s.bpp Ne1=%d Ne2=%d " %(repbppconfig+"/CATseq_sim",c1,c2)
 
     if sim_profiles.name in ["C10","C60"]:
@@ -272,13 +296,13 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         logger.error("%s does not exist", output_infos)
         logger.error("command: %s\nout:\n%s", command, out)
         sys.exit(42)
-        
+
     ### Read outputs ###
     logger.info("Read and save likelihoods (%s, %s)", c1, c2)
     ## bppml ##
     df_bppml = pd.read_csv(output_infos, sep = '\s+', names = ["Sites", "is.complete", "is.constant", "lnl", "rc", "pr"], header = 0)
     logger.debug("bppml: %s", df_bppml.to_string() )
-    
+
     df_bppml = df_bppml[["Sites", "lnl"]]
     df_bppml["C1"] = c1
     df_bppml["C2"] = c2
@@ -288,7 +312,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     df_bppml["Sites"] = df_bppml["Sites"].str.replace("[","").str.replace("]","")
     df_bppml[["Sites", "lnl"]]
     df_bppml["Sites"] = pd.to_numeric(df_bppml["Sites"])
-    
+
     return(df_bppml)
 
 def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
@@ -309,8 +333,8 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
         logger.error("%s is not a file", tree_fn)
     if not os.path.isfile(fasta_fn):
         logger.error("%s is not a file", fasta_fn)
-    
-    
+
+
     ### BPPML ###
     output_infos_bppml =  "%s/%s_%s_%s%s.infos"  %(repest, name , c1, c2, suffix)
     output_params_bppml = "%s/%s_%s_%s%s.params" %(repest, name , c1, c2, suffix)
@@ -356,11 +380,12 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
         # Mixture
         bppml_command+=" \'model%s=Mixture(model1=$(modelA),model2=$(modelC),model3=$(modelOC),relproba1=0.7,relproba2=0.2)\' " %(number_of_models)
         bppml_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
-    
+
     paths_option_str = ""
     if number_of_models == 3: # 2 Mixture models
         paths_option_str+=" site.number_of_paths=2 "
         paths_option_str+=" site.path1=\'model2[2] & model3[2] & model3[3]\' "
+        paths_option_str+=" site.path2=\'model2[1] & model3[1] \' "
 
     gamma_option_str = ""
     if gamma:
@@ -369,14 +394,14 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
         gamma_option_str+=" rate_distribution=\'Invariant(dist=Gamma(n=4))\' "
     else:
         gamma_option_str+=" rate_distribution=\'Constant()\' "
-    
+
     max_gap_allowed_option_str = ""
     if 0 <= max_gap_allowed <=100:
         max_gap_allowed_option_str+=" input.sequence.max_gap_allowed=%s " %(max_gap_allowed)
     else:
         logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
         sys.error(1)
-    
+
     bppml_command += max_gap_allowed_option_str + gamma_option_str + paths_option_str
 
     bppml_command += "nonhomogeneous.number_of_models=%s " %(number_of_models)
@@ -399,7 +424,7 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
         logger.error("%s does not exist", output_infos_bppml)
         logger.error("bppml_command: %s\nout:\n%s", bppml_command, out_bppml)
         sys.exit(42)
-    
+
     ### bppmixedlikelihoods ###
     output_infos_bppmixedl =  "%s/%s_%s_%s%s.bppmixedl.infos"  %(repest, name , c1, c2, suffix)
 
@@ -407,18 +432,23 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
     bppmixedl_command += " output.likelihoods.file=%s likelihoods.model_number=%s " %(output_infos_bppmixedl, number_of_models)
     bppmixedl_command += " param=%s input.tree.file=%s input.sequence.file=%s " %(output_params_bppml, tree_fn, fasta_fn)
     bppmixedl_command += max_gap_allowed_option_str + gamma_option_str + paths_option_str
-    
+
     out_bppmixedl = commands.getoutput(bppmixedl_command)
 
     if debug_mode_bpp:
         logger.info("%s\n%s", out_bppmixedl, bppmixedl_command)
-    
+
     if not os.path.exists(output_infos_bppmixedl):
         logger.error("%s does not exist", output_infos_bppmixedl)
         logger.error("command bppml: %s\nout:\n%s", bppml_command, out_bppml)
         logger.error("command bppmixedlikelihoods: %s\nout:\n%s", bppmixedl_command, out_bppmixedl)
         sys.exit(42)
 
+    df_proba_and_lnl_M = get_proba_and_lnl_M(out_bppmixedl)
+    df_proba_and_lnl_M["Variable"] = df_proba_and_lnl_M.index
+    df_proba_and_lnl_M = df_proba_and_lnl_M.reset_index(drop=True)
+    df_proba_and_lnl_M["C1"] = c1
+    df_proba_and_lnl_M["C2"] = c2
 
     ### Read outputs ###
     logger.info("Read and save likelihoods (mixture) (%s, %s)", c1, c2)
@@ -428,19 +458,19 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
     ## bppmixedlikelihoods ##
     df_bppmixedl = pd.read_csv(output_infos_bppmixedl, sep = '\s+', names = ["Sites", "LMa", "LMpc", "LMpcoc"], header = 0)
     logger.debug("bppmixedlikelihoods: %s", df_bppmixedl.to_string() )
-    
+
     df_c1c2 = pd.merge(df_bppml[["Sites", "LG"]], df_bppmixedl, on = "Sites")
 
     df_c1c2["lnl_Ma"] = df_c1c2["LG"] + df_c1c2["LMa"]  #(product of ln * -> +)
     df_c1c2["lnl_Mpc"] = df_c1c2["LG"] + df_c1c2["LMpc"]
     df_c1c2["lnl_Mpcoc"] = df_c1c2["LG"] + df_c1c2["LMpcoc"]
-    
+
     df_c1c2["C1"] = c1
     df_c1c2["C2"] = c2
     df_c1c2["Sites"] = df_c1c2["Sites"].str.replace("[","").str.replace("]","")
     df_c1c2["Sites"] = pd.to_numeric(df_c1c2["Sites"])
-    
-    return(df_c1c2)
+
+    return((df_c1c2, df_proba_and_lnl_M))
 
 def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, max_gap_allowed=90):
 

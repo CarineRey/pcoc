@@ -356,6 +356,43 @@ def calc_p_from_mixture(df_mixture):
     df_mixture = df_mixture[["Sites","p_Ma","p_Mpc","p_Mpcoc","p_Mpcoc+pc","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
     return(df_mixture)
 
+def calc_weighted_mean_P_from_mixture(df_P_lnl_M):
+    df_P_lnl_M = df_P_lnl_M.pivot_table(index = ["C1","C2"], columns = "Variable", values = ["Ma","Mpc","Mpcoc"])
+    df_P_lnl_M.columns = ["%s_%s" %(x,y) for x,y in df_P_lnl_M.columns]
+    df_P_lnl_M = df_P_lnl_M.reset_index()
+    
+    ln_sum_per_col = df_P_lnl_M[["Ma_lnl","Mpc_lnl","Mpcoc_lnl"]].apply(logsumexp,axis=0)
+    
+    df_P_lnl_M["Ma_weighted_P"] = df_P_lnl_M["Ma_P"] * np.exp(df_P_lnl_M["Ma_lnl"] - ln_sum_per_col["Ma_lnl"])
+    df_P_lnl_M["Mpc_weighted_P"] = df_P_lnl_M["Mpc_P"] * np.exp(df_P_lnl_M["Mpc_lnl"] - ln_sum_per_col["Mpc_lnl"])
+    df_P_lnl_M["Mpcoc_weighted_P"] = df_P_lnl_M["Mpcoc_P"] * np.exp(df_P_lnl_M["Mpcoc_lnl"] - ln_sum_per_col["Mpcoc_lnl"])
+    
+    weighted_mean_P = df_P_lnl_M[["Ma_weighted_P","Mpc_weighted_P","Mpcoc_weighted_P"]].apply(np.nansum,axis=0)
+    norm_weighted_mean_P = weighted_mean_P / np.nansum(weighted_mean_P)
+    
+    norm_weighted_mean_P.name = "weighted_by_l_mean_P"
+    norm_weighted_mean_P.index = norm_weighted_mean_P.index.str.replace("_weighted_P","")
+    
+    sum_per_col = df_P_lnl_M[["Ma_lnl","Mpc_lnl","Mpcoc_lnl"]].apply(np.nansum,axis=0)
+
+    df_P_lnl_M["Ma_weightedln_P"]    = df_P_lnl_M["Ma_P"]    * (df_P_lnl_M["Ma_lnl"]    / sum_per_col["Ma_lnl"])
+    df_P_lnl_M["Mpc_weightedln_P"]   = df_P_lnl_M["Mpc_P"]   * (df_P_lnl_M["Mpc_lnl"]   / sum_per_col["Mpc_lnl"])
+    df_P_lnl_M["Mpcoc_weightedln_P"] = df_P_lnl_M["Mpcoc_P"] * (df_P_lnl_M["Mpcoc_lnl"] / sum_per_col["Mpcoc_lnl"])
+    
+    weightedln_mean_P = df_P_lnl_M[["Ma_weightedln_P","Mpc_weightedln_P","Mpcoc_weightedln_P"]].apply(sum,axis=0)
+    norm_weightedln_mean_P = weightedln_mean_P / sum(weightedln_mean_P)
+
+    logger.info("weightedln_mean_P: %s",weightedln_mean_P)
+    logger.info("df_P_lnl_M:\n%s",df_P_lnl_M)
+
+    norm_weightedln_mean_P.name = "weighted_by_lnl_mean_P"
+    norm_weightedln_mean_P.index = norm_weightedln_mean_P.index.str.replace("_weightedln_P","")
+    
+    df_summary = pd.concat([norm_weightedln_mean_P, norm_weighted_mean_P], axis = 1)
+    df_summary = df_summary.reset_index()
+    df_summary.columns = ["Model", "weighted_by_lnl_mean_P", "weighted_by_l_mean_P"]
+
+    return(df_summary, df_P_lnl_M)
 
 def calc_p_from_V1(df_V1_prep):
     """equivalent to dico_typechg_het_det"""

@@ -528,8 +528,16 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
             pool.close()
             pool.join()
 
-            df_mixture_raw = pd.concat(df_res_mixture_l)
+            df_mixture_raw = pd.concat([df1 for df1,df2 in df_res_mixture_l])
+            df_P_lnl_M_raw = pd.concat([df2 for df1,df2 in df_res_mixture_l])
+            
             df_mixture = estim_data.calc_p_from_mixture(df_mixture_raw)
+            df_weighted_mean_P_summary, df_weighted_mean_P = estim_data.calc_weighted_mean_P_from_mixture(df_P_lnl_M_raw)
+
+            logger.info("Proportion of sites for each model:\n%s", df_weighted_mean_P_summary.to_string())
+            df_weighted_mean_P_summary.to_csv(prefix_out +  ".M_p_summary.tsv", index=False, sep='\t', na_rep = "0")
+            df_weighted_mean_P.to_csv(prefix_out +  ".M_p_per_profile.tsv", index=False, sep='\t', na_rep = "NA")
+
         else:
             df_mixture = pd.DataFrame()
 
