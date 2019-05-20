@@ -168,6 +168,8 @@ Options_ben.add_argument('--plot_event_repartition', action="store_true",
 Options_other = parser.add_argument_group('Other Options')
 #Options_other.add_argument('-log', type=str, default="",
 #                  help="a log filename to report avancement (default: no)")
+Options_other.add_argument('--nt',  action="store_true",
+                  help="Simulate sequences in codons and then translate them in aa in the detection tool. Usefull to get codon sequences associated to the aa sequences (default: False)")
 Options_other.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
                     default=False)
@@ -432,7 +434,17 @@ logger.info("Maximum number of convergent events:\t%s", maxTrans)
 logger.info("Minimum number of convergent events:\t%s", minTrans)
 logger.info("Maximum rate of the number of Convergent/Non-convergent leaves:\t%s", maxConvRate)
 
+############################
+# Simulation configuration #
+############################
 
+if args.nt:
+    nt_simulations = True
+else:
+    nt_simulations = False
+
+logger.info("Codon sequence simulations:\t%s", nt_simulations)
+metadata_run_dico["Codon sequence simulations"] = nt_simulations
 
 ##################################
 # Detection method configuration #
@@ -604,7 +616,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
         if c1!=c2:
             # Positif
             nameAC="%s_A%d_C%d"%(name0,c1,c2)
-            bpp_lib.make_simul(nameAC,c1,c2,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles)
+            bpp_lib.make_simul(nameAC,c1,c2,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles, nt = nt_simulations)
             AC_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameAC)
             if not os.path.isfile(AC_fasta_file):
                 logger.error("%s does not exist", AC_fasta_file)
@@ -614,7 +626,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
 
             # Negatif
             nameA="%s_A%d_C%d"%(name0,c1,c1)
-            bpp_lib.make_simul(nameA,c1,c1,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles)
+            bpp_lib.make_simul(nameA,c1,c1,g_tree, outputInternalSequences=outputInternalSequences, number_of_sites=Nsites, sim_profiles=sim_profiles, nt = nt_simulations)
 
             A_fasta_file = "%s/%s.fa" %(g_tree.repseq, nameA)
             if not os.path.isfile(A_fasta_file):

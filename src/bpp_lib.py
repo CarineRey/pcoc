@@ -29,6 +29,16 @@ logger = logging.getLogger("pcoc.bpp_lib")
 
 import pandas as pd
 
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+def make_protein_record(nuc_record):
+    """Returns a new SeqRecord with the translated sequence (default table)."""
+    return SeqRecord(seq = nuc_record.seq.translate(), \
+                     id = "trans_" + nuc_record.id, \
+                     description = "")
+
+
+
 debug_mode_bpp = False
 
 ########################################################################
@@ -87,7 +97,7 @@ def get_proba_and_lnl_M(out_bppmixedl_str):
 def make_simul(name, c1, c2, g_tree, sim_profiles,
                number_of_sites=1000,
                outputInternalSequences="yes",
-               cz_nodes={}, CzOneChange=True):
+               cz_nodes={}, CzOneChange=True, nt = False):
 
     nodesWithAncestralModel  = g_tree.conv_events.nodesWithAncestralModel_sim
     nodesWithTransitions     = g_tree.conv_events.nodesWithTransitions_sim
@@ -100,8 +110,12 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     if not os.path.isfile(tree_fn):
         logger.error("%s is not a file", tree_fn)
 
-    fasta_outfile = "%s/%s%s" %(repseq.replace("//","/"), name, ".fa")
-
+    fasta_outfile_final = "%s/%s%s" %(repseq.replace("//","/"), name, ".fa")
+    if nt:
+        fasta_outfile = fasta_outfile_final.replace(".fa",".nt.fa")
+        fasta_outfile_aa = fasta_outfile_final
+    else:
+        fasta_outfile = fasta_outfile_final
 
     if outputInternalSequences != "yes":
         outputInternalSequences = "no"
@@ -117,16 +131,31 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
             logger.error("%s is not a file", sim_profiles.formatted_frequencies_filename)
         command += " PROFILE_F=%s " %(sim_profiles.formatted_frequencies_filename)
 
-    command+=" param=%s.bpp Ne1=%d Ne2=%d " %(repbppconfig+"/CATseq_sim",c1,c2)
+    command+=" param=%s.bpp COL_C1=%d COL_C2=%d " %(repbppconfig+"/CATseq_sim",c1,c2)
+    if nt:
+        command+=" NE_A=1 NE_OC=1 NE_C=1 alphabet=\'Codon(letter=DNA)\' genetic_code=Standard " 
+             
 
     if sim_profiles.name in ["C10","C60"]:
-        command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
-        command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
-        command+=" modelOC=\'OneChange(model=$(modelC))\' "
+        if nt:
+            command+=" modela=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
+            command+=" modelc=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
+            command+=" modelA=\'Codon_AAFit(model=K80, fitness=FromModel(model=$(modela)), Ns=$(NE_A))\'" 
+            command+=" modelOC=\'OneChange(model=Codon_AAFit(model=K80, fitness=FromModel(model=$(modelc)), register=DnDs, numReg=2, Ns=$(NE_OC)))\'"
+            command+=" modelC=\'Codon_AAFit(model=K80, fitness=FromModel(model=$(modelc)), Ns=$(NE_C))\'"
+        else:
+            command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
+            command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
+            command+=" modelOC=\'OneChange(model=$(modelC))\' "
     else:
-        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
-        command+=" modelOC=\'OneChange(model=$(modelC))\' "
+        if nt:
+            command+=" modelA=\'Codon_AAFit(model=K80, fitness=Empirical(file=$(PROFILE_F), col=$(COL_C1)), Ns=$(NE_A))\'"
+            command+=" modelOC=\'OneChange(model=Codon_AAFit(model=K80, fitness=Empirical(file=$(PROFILE_F), col=$(COL_C2))), register=DnDs, numReg=2, Ns=$(NE_OC))\'"
+            command+=" modelC=\'Codon_AAFit(model=K80, fitness=Empirical(file=$(PROFILE_F), col=$(COL_C2)), Ns=$(NE_C))\'"
+        else:
+            command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C1)))\' "
+            command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C2)))\' "
+            command+=" modelOC=\'OneChange(model=$(modelC))\' "
 
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
@@ -156,6 +185,9 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     # If noisy profiles
     sup_command = ""
     if cz_nodes:
+        if nt:
+            logger.error("noisy+nt not yet implemented")
+            sys.exit(45)
         for (cz, nodes) in cz_nodes.items():
             if nodes:
                 if CzOneChange:
@@ -185,9 +217,18 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
 
     out = commands.getoutput(command)
 
+    if nt:
+        proteins = (make_protein_record(nuc_rec) for nuc_rec in \
+            SeqIO.parse(fasta_outfile, "fasta"))
+        SeqIO.write(proteins, fasta_outfile_aa, "fasta")
+
     if debug_mode_bpp:
         logger.info("%s\n%s\n%s", command, out, command)
-
+        
+    if not os.path.isfile(fasta_outfile_final):
+        logger.error("%s is not a file", fasta_outfile_final)
+        logger.error(out)
+        sys.exit(1)
 
 ########################################################################
 ##                    BPP estimations                                 ##
@@ -227,14 +268,14 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         command += " PROFILE_F=%s " %(est_profiles.formatted_frequencies_filename)
 
 
-    command += "Ne1=%d Ne2=%d" %(c1, c2)
+    command += "COL_C1=%d COL_C2=%d" %(c1, c2)
     if est_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
         command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
         command+=" modelOC=\'OneChange(model=$(modelC))\' "
     else:
-        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C1)))\' "
+        command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C2)))\' "
         command+=" modelOC=\'OneChange(model=$(modelC))\' "
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
@@ -353,14 +394,14 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
         bppml_command += " PROFILE_F=%s " %(est_profiles.formatted_frequencies_filename)
 
 
-    bppml_command += "Ne1=%d Ne2=%d" %(c1, c2)
+    bppml_command += "COL_C1=%d COL_C2=%d" %(c1, c2)
     if est_profiles.name in ["C10","C60"]:
         bppml_command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
         bppml_command+=" modelC=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
         bppml_command+=" modelOC=\'OneChange(model=$(modelC))\' "
     else:
-        bppml_command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        bppml_command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        bppml_command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C1)))\' "
+        bppml_command+=" modelC=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C2)))\' "
         bppml_command+=" modelOC=\'OneChange(model=$(modelC))\' "
 
     bppml_command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
@@ -437,7 +478,7 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
 
     if debug_mode_bpp:
         logger.info("%s\n%s", out_bppmixedl, bppmixedl_command)
-
+        
     if not os.path.exists(output_infos_bppmixedl):
         logger.error("%s does not exist", output_infos_bppmixedl)
         logger.error("command bppml: %s\nout:\n%s", bppml_command, out_bppml)
@@ -502,12 +543,12 @@ def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, ma
             logger.error("%s is not a file", est_profiles.formatted_frequencies_filename)
         command += " PROFILE_F=%s " %(est_profiles.formatted_frequencies_filename)
 
-    command += " Ne1=%d " %(c1)
+    command += " COL_C1=%d " %(c1)
 
     if est_profiles.name in ["C10","C60"]:
         command+=" modelA=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
     else:
-        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        command+=" modelA=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(COL_C1)))\' "
 
     command += " \'nonhomogeneous.root_freq=FromModel(model=$(modelA))\' "
 
