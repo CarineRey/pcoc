@@ -382,8 +382,8 @@ def calc_weighted_mean_P_from_mixture(df_P_lnl_M):
     weightedln_mean_P = df_P_lnl_M[["Ma_weightedln_P","Mpc_weightedln_P","Mpcoc_weightedln_P"]].apply(sum,axis=0)
     norm_weightedln_mean_P = weightedln_mean_P / sum(weightedln_mean_P)
 
-    logger.info("weightedln_mean_P: %s",weightedln_mean_P)
-    logger.info("df_P_lnl_M:\n%s",df_P_lnl_M)
+    logger.debug("weightedln_mean_P: %s",weightedln_mean_P)
+    logger.debug("df_P_lnl_M:\n%s",df_P_lnl_M)
 
     norm_weightedln_mean_P.name = "weighted_by_lnl_mean_P"
     norm_weightedln_mean_P.index = norm_weightedln_mean_P.index.str.replace("_weightedln_P","")

@@ -510,6 +510,9 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
     df_c1c2["C2"] = c2
     df_c1c2["Sites"] = df_c1c2["Sites"].str.replace("[","").str.replace("]","")
     df_c1c2["Sites"] = pd.to_numeric(df_c1c2["Sites"])
+    
+    with open("%s.bilan" %(output_infos_bppml), "w") as commands_bppml:
+        commands_bppml.write("##command bppml:\n%s\n##command bppmixedl:\n%s\n\n## out bppml:\n%s\n## out bppmixedl:\n%s" %(bppml_command, bppmixedl_command, out_bppml, out_bppmixedl))
 
     return((df_c1c2, df_proba_and_lnl_M))
 

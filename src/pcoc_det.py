@@ -385,9 +385,6 @@ if args.manual_mode == "-":
         p_events.append(",".join(map(str,[ND_T]+ND_C)))
     p_events = "/".join(p_events)
     logger.info("scenario reconstructed from %s: \"%s\"", os.path.basename(tree_filename), p_events)
-
-
-
 elif args.manual_mode:
     manual_mode_nodes = {"T":[],"C":[]}
     p_events = args.manual_mode.strip().split("/")
@@ -469,7 +466,7 @@ def reorder_l(l, order):
     return new_l
 
 def make_estim_mixture(s):
-    e1, e2,g_tree = s
+    e1, e2, g_tree = s
     df_res = bpp_lib.make_estim_mixture(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withMixture",  ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
     return (df_res)
 
