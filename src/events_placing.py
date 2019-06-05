@@ -898,7 +898,7 @@ def placeNTransitionsInTree(numTransitions, maxTransitions, maxConvRate, tree_in
 
 def trim_tree(tree_fn, manual_mode_nodes, sp_present, reptree):
     trim_t = init_tree(tree_fn)
-    trim_t.prune(sp_present)
+    trim_t.prune(sp_present, preserve_branch_length=True)
     trim_nodeId =0
 
     for n in trim_t.traverse("postorder"):
