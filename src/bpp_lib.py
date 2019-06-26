@@ -185,25 +185,39 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     # If noisy profiles
     sup_command = ""
     if cz_nodes:
-        if nt:
+        logger.info("cz_nodes: %s",cz_nodes)
+        if nt and not sim_profiles.name in ["C10","C60"] :
             logger.error("noisy+nt not yet implemented")
             sys.exit(45)
         for (cz, nodes) in cz_nodes.items():
             if nodes:
                 if CzOneChange:
                     number_of_models +=1
-                    if sim_profiles.name in ["C10","C60"]:
-                        sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
+                    if nt:
+                        ne_cz = 1
+                        if sim_profiles.name in ["C10","C60"]:
+                            sup_command+=" model%s=\'OneChange(model=Codon_AAFit(model=K80, fitness=FromModel(model=LGL08_CAT_C%s(nbCat=$(NBCAT))), register=DnDs, numReg=2, Ns=%s))\'"  %(number_of_models, cz, ne_cz)
+                        else:
+                            logger.error("noisy+nt not yet implemented")
                     else:
-                        sup_command+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
+                        if sim_profiles.name in ["C10","C60"]:
+                            sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
+                        else:
+                            sup_command+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
                     t_node = nodes[0]
                     sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,str(t_node))
                     if len(nodes) > 1:
                         number_of_models +=1
-                        if sim_profiles.name in ["C10","C60"]:
-                            sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
+                        if nt:
+                            if sim_profiles.name in ["C10","C60"]:
+                                sup_command+=" model%s=\'Codon_AAFit(model=K80, fitness=FromModel(model=LGL08_CAT_C%s(nbCat=$(NBCAT))), register=DnDs, numReg=2, Ns=%s)\' " %(number_of_models, cz, ne_cz)
+                            else:
+                                logger.error("noisy+nt not yet implemented")
                         else:
-                            sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
+                            if sim_profiles.name in ["C10","C60"]:
+                                sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
+                            else:
+                                sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
                         sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str,nodes[1:])))
                 else:
                     number_of_models +=1
