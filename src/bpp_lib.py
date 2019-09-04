@@ -271,7 +271,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     output_infos =  "%s/%s_%s_%s%s.infos"  %(repest, name , c1, c2, suffix)
     output_params = "%s/%s_%s_%s%s.params" %(repest, name , c1, c2, suffix)
 
-    command = "bppml param=%s \'optimization.ignore_parameters=*\' output.infos=%s output.estimates=%s input.tree.file=%s \'input.sequence.file=%s\' " %(repbppconfig+"/CATseq_estim.bpp", output_infos, output_params, tree_fn, fasta_file)
+    command = "bppml param=%s \'optimization.ignore_parameters=BrLen*\' output.infos=%s output.estimates=%s input.tree.file=%s \'input.sequence.file=%s\' " %(repbppconfig+"/CATseq_estim.bpp", output_infos, output_params, tree_fn, fasta_file)
     number_of_models = 0
 
     if est_profiles.name in ["C10","C60"]:
@@ -550,7 +550,7 @@ def make_estim_conv(name, c1, g_tree, est_profiles, suffix="", gamma = False, ma
     output_infos  = "%s/%s_topo%s.infos"   %(repest, name, suffix)
     output_params = "%s/%s_topo%s.params" %(repest, name, suffix)
 
-    command="bppml param=%s \'optimization.ignore_parameters=*\' output.infos=%s output.estimates=%s input.tree.file=%s \'input.sequence.file=%s\' "%(repbppconfig + "/CATseq_conv.bpp", output_infos, output_params, tree_fn, fasta_file)
+    command="bppml param=%s \'optimization.ignore_parameters=BrLen*\' output.infos=%s output.estimates=%s input.tree.file=%s \'input.sequence.file=%s\' "%(repbppconfig + "/CATseq_conv.bpp", output_infos, output_params, tree_fn, fasta_file)
     number_of_models = 0
 
     if est_profiles.name in ["C10","C60"]:
