@@ -211,7 +211,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     output_infos =  "%s/%s_%s_%s%s.infos"  %(repest, name , c1, c2, suffix)
     output_params = "%s/%s_%s_%s%s.params" %(repest, name , c1, c2, suffix)
 
-    command_bppml = "bppml param=%s \'optimization.ignore_parameters=*\' output.infos=%s output.estimates=%s TREE=%s \'FILESEQ=%s\' " \
+    command_bppml = "bppml param=%s \'optimization.ignore_parameters=BrLen*\' output.infos=%s output.estimates=%s TREE=%s \'FILESEQ=%s\' " \
         %(repbppconfig+"/CATseq_estim.bpp", output_infos, output_params, tree_fn, fasta_file)
     number_of_models = 0
     nonhomogeneous_models=""
@@ -491,7 +491,7 @@ def make_estim_conv_topo(name, c1, g_tree, est_profiles, suffix="", gamma = Fals
     output_infos  = "%s/%s_topo%s.infos"   %(repest, name, suffix)
     output_params = "%s/%s_topo%s.params" %(repest, name, suffix)
 
-    command="bppml param=%s \'optimization.ignore_parameters=*\' output.infos=%s output.estimates=%s TREE=%s \'FILESEQ=%s\' " \
+    command="bppml param=%s \'optimization.ignore_parameters=BrLen*\' output.infos=%s output.estimates=%s TREE=%s \'FILESEQ=%s\' " \
         %(repbppconfig + "/CATseq_conv.bpp", output_infos, output_params, tree_fn, fasta_file)
     
     number_of_models = 0
