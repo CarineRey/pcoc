@@ -23,8 +23,9 @@ DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT
 #test8: NT simulation
 $DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test_nt -n_sc 1 -nb_sampled_couple 10 -sim_profiles C10  --ali_noise -n_sites 5 -c 5 -c_max 7 -cpu 1  $debug --nt --no_clean_seqs"
 
+
 $DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test_nt -n_sc 1 -nb_sampled_couple 10 -sim_profiles $DATA_DIR/aa_per_properties.csv -n_sites 5 -c 5 -c_max 7 -cpu 1  $debug --nt --no_clean_seqs"
-$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test_nt -n_sc 1 -nb_sampled_couple 10 -sim_profiles C10                             -n_sites 5 -c 5 -c_max 7 -cpu 1  $debug --nt --no_clean_seqs"
+$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test_nt -n_sc 1 -nb_sampled_couple 10 -sim_profiles $DATA_DIR/aa_per_properties.csv -n_sites 5 -c 5 -c_max 7 -cpu 1  $debug --nt --no_clean_seqs"
 
 # test7: PROFILE INPUT
 #$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -sim_profiles $DATA_DIR/C10_aa_frequencies.csv -est_profiles C10 -n_sites 10 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 0 --no_clean_seqs"

@@ -433,7 +433,7 @@ def make_estim_mixture(name, c1, c2, g_tree, est_profiles, suffix="",
     if nodesWithTransitions:
         number_of_models +=1
         # Mixture
-        bppml_command+=" \'model%s=Mixture(model1=$(modelA),model2=$(modelC),model3=$(modelOC),relproba1=0.7,relproba2=0.2)\' " %(number_of_models)
+        bppml_command+=" \'model%s=Mixture(model1=$(modelA),model2=$(modelC),model3=$(modelOC),relproba1=Mixture.relproba1_2,relproba2=0.2)\' " %(number_of_models)
         bppml_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
 
     paths_option_str = ""
