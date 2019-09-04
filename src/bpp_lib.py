@@ -299,7 +299,7 @@ output.tree.file=$(REP_EST)/$(NAME)$(SUFFIX).dnd
 
 ### estimation
 input.sequence.remove_saturated_sites=yes
-optimization.ignore_parameters=*
+optimization.ignore_parameters=BrLen*
 
 output.infos=$(REP_EST)/$(NAME)_$(Ne1)_$(Ne2)$(SUFFIX).infos
 
@@ -324,7 +324,7 @@ rate_distribution=Constant()
 
 ### estimation
 input.sequence.remove_saturated_sites=yes
-optimization.ignore_parameters=*
+optimization.ignore_parameters=BrLen*
 
 output.infos=$(REP_EST)/$(NAME)_topo$(SUFFIX).infos
 output.estimates=$(REP_EST)/$(NAME)_topo$(SUFFIX).params
