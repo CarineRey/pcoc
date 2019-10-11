@@ -8,9 +8,9 @@ os:
 install:
   - export BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
   - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH, BRANCH=$BRANCH"
-  - docker pull carinerey/pcoc:v1.1.0
+  - docker pull carinerey/pcoc:v1.1.0.beta
   - docker images
-  - docker build --cache-from carinerey/pcoc:v1.1.0 -t carinerey/pcoc -f etc/Dockerfile .
+  - docker build --cache-from carinerey/pcoc:v1.1.0.beta -t carinerey/pcoc:v1.1.0.beta -f etc/Dockerfile .
 script:
   - make test
   - make test_det
@@ -19,6 +19,6 @@ script:
 after_success:
   - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
   - if [[ $BRANCH == "master" ]]; then export TAG=""; else export TAG=":$BRANCH"; fi
-  - export REPO_pcoc=$DOCKER_USER/pcoc$TAG
+  - export REPO_pcoc="$DOCKER_USER"/pcoc"$TAG"
   - docker build -t $REPO_pcoc .
   - docker push $REPO_pcoc

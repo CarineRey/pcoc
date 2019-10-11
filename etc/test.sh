@@ -18,7 +18,7 @@ debug="--no_cleanup --debug"
 debug=""
 
 
-DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR -v $DATA_DIR:$DATA_DIR  carinerey/pcoc:v1.1.0"
+DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR -v $DATA_DIR:$DATA_DIR  carinerey/pcoc:v1.1.0.beta"
 
 #test8: NT simulation
 $DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test_nt -n_sc 1 -nb_sampled_couple 10 -sim_profiles C10  --ali_noise -n_sites 5 -c 5 -c_max 7 -cpu 1  $debug --nt --no_clean_seqs"
