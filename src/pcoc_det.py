@@ -583,14 +583,13 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
 
         if not df_mixture.empty:
-            df_bilan = pd.merge(df_bilan, df_mixture, on = "Sites")
+            df_bilan = pd.merge(df_bilan, df_mixture, on = "Sites", how = "outer")
 
         if not df_V1.empty:
-            df_bilan = pd.merge(df_bilan, df_V1, on = "Sites")
+            df_bilan = pd.merge(df_bilan, df_V1, on = "Sites", how = "outer")
 
         col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc", "p_Mpcoc", "p_Mpc", "p_Ma"]]
         df_bilan = df_bilan[col_bilan]
-
 
         dict_values_pcoc = {}
         for m in ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc","p_Mpcoc", "p_Mpc", "p_Ma"]:
@@ -600,7 +599,6 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         models = dict_values_pcoc.keys()
 
         # filter position:
-
         bilan_f = {}
 
         # filter on indel prop:

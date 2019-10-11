@@ -353,7 +353,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
         sys.exit(42)
 
     ### Read outputs ###
-    logger.info("Read and save likelihoods (%s, %s)", c1, c2)
+    logger.debug("Read and save likelihoods (%s, %s)", c1, c2)
     ## bppml ##
     df_bppml = pd.read_csv(output_infos, sep = '\s+', names = ["Sites", "is.complete", "is.constant", "lnl", "rc", "pr"], header = 0)
     logger.debug("bppml: %s", df_bppml.to_string() )
