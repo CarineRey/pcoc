@@ -41,7 +41,6 @@ $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3
 $DOCKER_CMD pcoc_det.py -t $tree_with_cond -aa $ali -o $PWD/output_pcoc_det -m "-"
 
 ## Then run pcoc_det on your alignment
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --gamma
 
 ## if you want to have a nice plot of the sites detected as convergent you can use the option --plot with or without the option --reorder
 ## With the --reorder option:
@@ -50,8 +49,13 @@ $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot 
 $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
 ## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
 $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder -plot_title "Test PCOC"
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma -plot_title "Test PCOC"
-$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma -plot_title "Test PCOC"
+
+
+# Test Gamma 
+#echo "Test Gamma (too long, to be run manually to test gamma)"
+#$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --gamma
+#$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --inv_gamma -plot_title "Test PCOC"
+#$DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder --gamma -plot_title "Test PCOC"
 
 
 ## another example with several convergent branches, with OC applied on branches 11, 6, and 15, and PC applied on all of 11,9,10,6,15:
