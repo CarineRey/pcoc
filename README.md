@@ -123,7 +123,7 @@ Unlike docker, Singularity "pull" will create an image in the current working di
 
 ```{sh}
 singularity pull docker://carinerey/pcoc
-singularity run ./pcoc_latest.sif [SOME PCOC TOOL] [SOME PCOC OPTIONS]
+singularity exec ./pcoc_latest.sif [SOME PCOC TOOL] [SOME PCOC OPTIONS]
 ```
 
 ## 3. Usage
