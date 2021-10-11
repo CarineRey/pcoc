@@ -224,7 +224,7 @@ def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
 
     if re.search("^Number of sites retained.*: 0$",out,re.MULTILINE) or \
        re.search("^Number of sites.*: 0$",out,re.MULTILINE):
-        logger.warning("No site retained for %s (too much gaps), you can use the \"--max_gap_allowed\" option.", name)
+        logger.error("No site retained for %s (too many gaps), you can use the \"--max_gap_allowed\" option.", name)
         f_infos = open(info_filename,"w")
         f_infos.close()
 
