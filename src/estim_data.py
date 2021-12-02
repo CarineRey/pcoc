@@ -23,7 +23,6 @@ import math
 import os
 import re
 import numpy as np
-import pandas as pd
 
 from scipy.misc import logsumexp
 
@@ -196,19 +195,11 @@ def dico_typechg(C1,C2, name_AC, g_tree, est_profiles, sim_profiles, n_sites=100
                 bilan[k][b+a] = []
 
     dli= {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
-<<<<<<< HEAD
     for O in ["withOneChange","noOneChange"]: 
         infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C1,C1,C1,O)
         infosC1C1C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C1,C1,C2,O)
         infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C2,C1,C1,O)
         infosC1C2C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C2,C1,C2,O)
-=======
-    for O in ["withOneChange","noOneChange"]:
-        infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C1,C1,C1,O)
-        infosC1C1C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C1,C1,C2,O)
-        infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C2,C1,C1,O)
-        infosC1C2C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C2,C1,C2,O)
->>>>>>> 79d8f9b... big refactoring
 
         ### read infos
         dli[O][11][12] = read_info_exception(infosC1C1C1C2OPT_file, n_sites, O, 11, 12)
@@ -755,7 +746,6 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, est_profiles, sim_profiles, set_t1
     if not set_t1:
         for t1 in range(1, (NbCat_Est+1)):
             set_t1.append(t1)
-<<<<<<< HEAD
     
     infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos_1"%(repest,simu_i,C1,C1,C1,C1)
     infosC1C1T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos_1"%(repest,simu_i,C1,C1,C1)
@@ -763,15 +753,6 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, est_profiles, sim_profiles, set_t1
     infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos_1"%(repest,simu_i,C1,C2,C1,C1)
     infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos_1"%(repest,simu_i,C1,C2,C1)
   
-=======
-
-    infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos"%(repest,simu_i,C1,C1,C1,C1)
-    infosC1C1T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos"%(repest,simu_i,C1,C1,C1)
-
-    infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos"%(repest,simu_i,C1,C2,C1,C1)
-    infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos"%(repest,simu_i,C1,C2,C1)
-
->>>>>>> 79d8f9b... big refactoring
     dli={}
     dli[11]={}  # spec
     dli[12]={}  # sens
@@ -806,15 +787,9 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, est_profiles, sim_profiles, set_t1
         infosC1C1T1_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos_1"%(repest,simu_i,C1,C1,t1)
         infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos_1"%(repest,simu_i,C1,C1,t1,t1)
 
-<<<<<<< HEAD
         infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos_1"%(repest,simu_i,C1,C2,t1,t1)
         infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos_1"%(repest,simu_i,C1,C2,t1)
         
-=======
-        infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos"%(repest,simu_i,C1,C2,t1,t1)
-        infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos"%(repest,simu_i,C1,C2,t1)
-
->>>>>>> 79d8f9b... big refactoring
 
         ### read infos
         dli[11][12]=read_info_exception(infosC1C1T1_file,n_sites, "noOneChange", 11, 12)
