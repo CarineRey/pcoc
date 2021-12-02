@@ -327,7 +327,7 @@ def make_estim(name, c1, c2, g_tree, est_profiles, suffix="",
     df_bppml["T_C2"] = None
     #logger.debug("bppml: %s", df_bppml.head().to_string())
     df_bppml["Sites"] = df_bppml["Sites"].str.replace("[","").str.replace("]","")
-    df_bppml["Sites"] = pd.to_numeric(df_bppml["Sites"])
+    df_bppml["Sites"] = pd.to_numeric(df_bppml["Sites"]) + 1
     
     return(df_bppml)
 

@@ -49,7 +49,7 @@ def read_info(nf, n_sites):
             ll.append(lnL)
             i+=1
     pos = n_sites
-    while pos >= i:
+    while pos > i:
         ll.append(None)
         i+=1
 
