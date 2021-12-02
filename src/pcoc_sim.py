@@ -458,9 +458,10 @@ def remove_folder(path):
         shutil.rmtree(path)
 
 def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
+    simu_id = i
     start_simu = time.time()
-    name0="Scenario_%d"%(i)
-    name0_info="Scenario %d/%d"%(i, Nbsimul)
+    name0="Scenario_%d" %(simu_id)
+    name0_info="Scenario %d/%d" %(simu_id, Nbsimul)
     logger.info("START: %s", name0_info)
     metadata_simu_dico = {}
     logger.debug("Tree: %s", os.path.basename(tree_filename))
@@ -502,7 +503,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             return {},[],[],[],[]
         else:
             logger.info("%s - Start again (%s/5)", name0, n_try)
-            R = mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = n_try + 1)
+            R = mk_simu((simu_id, tree_filename, OutDirNamePrefixTree), n_try = n_try + 1)
             return R
     else:
         logger.info("%s - Assignment of the convergent events: OK", name0_info)
