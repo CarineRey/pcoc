@@ -32,7 +32,6 @@ import math
 
 import bpp_lib
 import events_placing
-import plot_data
 import estim_data
 
 #import multiprocessing
@@ -143,6 +142,9 @@ AdvancedOptions.add_argument('--debug', action="store_true",
 
 ### Option parsing
 args = parser.parse_args()
+
+if (args.plot|args.plot_complete_ali):
+    import plot_data
 
 positions_to_highlight = []
 if args.ph:
@@ -409,7 +411,7 @@ metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
 
-pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
+pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", header=True, sep='\t')
 
 def remove_folder(path):
     # check if folder exists

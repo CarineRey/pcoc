@@ -24,7 +24,7 @@ import os
 import sys
 import argparse
 import time
-from ete3 import Tree, NodeStyle, TreeStyle, TextFace
+from ete3 import Tree
 
 ##########
 # inputs #
@@ -47,11 +47,16 @@ Options = parser.add_argument_group('Options')
 Options.add_argument('-m', '--manual_mode_test', type=str, metavar="\"x/y,z/...\"",
                     help="Highlight, in the output plot, user defined convergent transition/branches. Transition node must be the first number and independent events must be separed by a \"/\". ex: \"1,2,3/67/55,56\" (default: None)",
                     default="")
+Options.add_argument('-n', '--noplot', action="store_true", help='Do not produce plot pdf. This is useful when X server is not available.')
+Options.add_argument('-u', '--outnwk', type=str, default='pcoc_num_tree.nwk', help='Output nwk file when --noplot is set.')
 ##############
+
 
 ### Option parsing
 args = parser.parse_args()
 
+if not args.noplot:
+    from ete3 import NodeStyle, TreeStyle, TextFace
 
 def init_tree(nf):
     t = Tree(nf)
@@ -68,19 +73,20 @@ def init_tree(nf):
 
 
 # Basic tree style
-tree_style = TreeStyle()
-tree_style.show_leaf_name = False
-tree_style.show_branch_length = False
-tree_style.draw_guiding_lines = True
-tree_style.complete_branch_lines_when_necessary = True
+if not args.noplot:
+    tree_style = TreeStyle()
+    tree_style.show_leaf_name = False
+    tree_style.show_branch_length = False
+    tree_style.draw_guiding_lines = True
+    tree_style.complete_branch_lines_when_necessary = True
 
-nstyle = NodeStyle()
-nstyle["fgcolor"] = "black"
-nstyle["size"] = 0
+    nstyle = NodeStyle()
+    nstyle["fgcolor"] = "black"
+    nstyle["size"] = 0
 
-nstyle_L = NodeStyle()
-nstyle_L["fgcolor"] = "black"
-nstyle_L["size"] = 0
+    nstyle_L = NodeStyle()
+    nstyle_L["fgcolor"] = "black"
+    nstyle_L["size"] = 0
 
 if not os.path.isfile(args.tree):
     print ("%s does not exist" %args.tree)
@@ -97,30 +103,39 @@ if args.manual_mode_test:
         manual_mode_nodes["T"].append(l_e[0])
         manual_mode_nodes["C"].extend(l_e[1:])
 
-for n in tree.traverse():
-    if n.is_leaf():
-        n.set_style(nstyle_L)
-        n.add_face(TextFace(str(n.name)), column=0, position="aligned")
-    else:
-        n.set_style(nstyle)
-    nd = TextFace(str(n.ND))
+if args.noplot:
+    for n in tree.traverse():
+        if n.is_leaf():
+            n.name = n.name+'_'+str(n.ND)
+        else:
+            n.name = str(n.ND)
+    tree.write(outfile=args.outnwk, format=1)
+    print args.outnwk
+else:
+    for n in tree.traverse():
+        if n.is_leaf():
+            n.set_style(nstyle_L)
+            n.add_face(TextFace(str(n.name)), column=0, position="aligned")
+        else:
+            n.set_style(nstyle)
+        nd = TextFace(str(n.ND))
 
-    if manual_mode_nodes:
-        if n.ND in manual_mode_nodes["T"]:
-            nd.background.color = "red"
-        elif n.ND in manual_mode_nodes["C"]:
-            nd.background.color = "orange"
+        if manual_mode_nodes:
+            if n.ND in manual_mode_nodes["T"]:
+                nd.background.color = "red"
+            elif n.ND in manual_mode_nodes["C"]:
+                nd.background.color = "orange"
+            else:
+                nd.background.color = "white"
         else:
             nd.background.color = "white"
-    else:
-        nd.background.color = "white"
-    nd.margin_right = 2
-    nd.margin_top = 1
-    nd.margin_left = 2
-    nd.margin_bottom = 1
-    nd.border.width = 1
-    n.add_face(nd, column=0, position="float")
-    n.add_face(TextFace("       "), column=0, position="branch-bottom")
+        nd.margin_right = 2
+        nd.margin_top = 1
+        nd.margin_left = 2
+        nd.margin_bottom = 1
+        nd.border.width = 1
+        n.add_face(nd, column=0, position="float")
+        n.add_face(TextFace("       "), column=0, position="branch-bottom")
 
-tree.render(args.output, tree_style=tree_style)
-print args.output
+    tree.render(args.output, tree_style=tree_style)
+    print args.output
