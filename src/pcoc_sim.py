@@ -457,8 +457,8 @@ def remove_folder(path):
         # remove if exists
         shutil.rmtree(path)
 
-def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
-    simu_id = i
+def mk_simu(input_set, n_try = 0) :
+    (simu_id, tree_filename, OutDirNamePrefixTree) = input_set
     start_simu = time.time()
     name0="Scenario_%d" %(simu_id)
     name0_info="Scenario %d/%d" %(simu_id, Nbsimul)
@@ -582,7 +582,7 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
     k_couple = 0
     for (c1,c2) in SampledCATcouples:
         k_couple+=1
-        logger.info("Scenario %s/%s - Couple %s/%s, C1: %s, C2: %s",i, Nbsimul, k_couple, Nb_sampled_couple, c1, c2)
+        logger.info("Scenario %s/%s - Couple %s/%s, C1: %s, C2: %s", simu_id, Nbsimul, k_couple, Nb_sampled_couple, c1, c2)
 
         dict_benchmark = {11:{}, 12:{}}
 
@@ -590,8 +590,6 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             outputInternalSequences = "yes"
         else:
             outputInternalSequences = "no"
-
-
 
         logger.debug("Tree simul : %s", g_tree.tree_fn_sim)
         logger.debug("Tree estim : %s", g_tree.tree_fn_est)
