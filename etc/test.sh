@@ -6,6 +6,7 @@ mkdir -p test
 cd test
 ROOT_DIR=$PWD
 TREES_DIR=$ROOT_DIR/../etc/data/tree_ensembl
+DATA_DIR=$ROOT_DIR/../example/data/
 OUTPUT_DIR=$ROOT_DIR/out_test/
 rm -rf $OUTPUT_DIR || ls $ROOT_DIR
 mkdir -p  $OUTPUT_DIR
@@ -16,10 +17,19 @@ meth="--pcoc --ident --topo"
 debug="--no_cleanup --debug"
 debug=""
 
-DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR  carinerey/pcoc"
+
+DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR -v $DATA_DIR:$DATA_DIR  carinerey/pcoc:v1.1.0"
+
+
+# test: P CONV
+$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -sim_profiles $DATA_DIR/aa_order_checking.csv -est_profiles C10  -n_sites 10 -c 5 -c_max 7 -cpu 1  $meth $debug  --no_clean_seqs"
+
+# test7: PROFILE INPUT
+#$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -sim_profiles $DATA_DIR/C10_aa_frequencies.csv -n_sites 1 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 0 --no_clean_seqs"
+#$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -sim_profiles $DATA_DIR/aa_per_properties.csv -n_sites 1 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 0 --no_clean_seqs"
 
 # test1: TOPO IDENT PCOC NO_NOISE
-$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -n_sites 1 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 1 --no_clean_seqs"
+$DOCKER_CMD  bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test1 -n_sc 1 -nb_sampled_couple 1 -sim_profiles C10 -n_sites 1 -c 5 -c_max 7 -cpu 1  $meth $debug --plot_ali -min_dist_CAT 1 --no_clean_seqs"
 
 #test2: TOPO IDENT PCOC BL_NOISE
 $DOCKER_CMD bash -c "pcoc_sim.py -td $TREES_DIR -o $OUTPUT_DIR/test2 -n_sc 1 -nb_sampled_couple 1 -n_sites 100 -c 5 -c_max 7 -cpu 1 $meth $debug --bl_noise" 

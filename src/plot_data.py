@@ -38,6 +38,8 @@ import logging
 logger = logging.getLogger("pcoc.plot_data")
 
 
+MODELS_L = ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc","p_Mpcoc", "p_Mpc", "p_Ma", "PCOC", "PC", "OC", "Topological", "Identical"]
+
 #### SequencePlotFace methods modification
 class SequencePlotFace_mod(faces.SequencePlotFace):
     def draw_x_axis(self):
@@ -255,12 +257,14 @@ class SequenceScoreFace(StaticItemFace):
 
     def draw_legend(self):
         legend_h = self.height * ((self.nb_models - 1) / float(self.nb_models))
-        if legend_h < 35:
-            legend_h = 35
+        if legend_h < 65:
+            legend_h = 65
         legend_rect = QGraphicsRectItem(-20, 0, 10, legend_h, parent=self.item)
         x0 = -20
-        n_cat = 6.
-        for y, str_y in [(1,1),(1/n_cat*5,0.99), (1/n_cat*4, 0.9), (1/n_cat*3, 0.8), (1/n_cat*2, 0.7), (1/n_cat*1, 0.5) , (1/n_cat*0,0)]:
+        n_cat = 11.
+        score_l = [(1,11),(0.99,10),(0.9,9),(0.8,8),(0.7,7),(0.6,6),(0.5,5),(0.4,4),(0.3,3),(0.2,2),(0.1,1),(0,0)]
+        for y, str_y in [(1/n_cat*y,str_y) for (str_y,y) in score_l]:
+        #for y, str_y in [(1,1),(1/n_cat*5,0.99), (1/n_cat*4, 0.9), (1/n_cat*3, 0.8), (1/n_cat*2, 0.7), (1/n_cat*1, 0.5) ,  (1/n_cat*0,0)]:
             y_stick = legend_h - y * legend_h
             lineItem = QGraphicsLineItem(x0 - 5, y_stick , x0, y_stick,
                                                parent=self.item)
@@ -273,7 +277,8 @@ class SequenceScoreFace(StaticItemFace):
             # Center text according to masterItem size
             text.setPos(x0 - tw - 7, y_stick - th/2)
 
-        for (y1,y2,c) in [(1,1/n_cat*5, 0.99), (1/n_cat*5, 1/n_cat*4, 0.9), (1/n_cat*4, 1/n_cat*3, 0.8), (1/n_cat*3, 1/n_cat*2, 0.7), (1/n_cat*2, 1/n_cat*1, 0.5), (1/n_cat*1, 1/n_cat*0, 0)]:
+        for (y1,y2,c) in [(1/n_cat*(y+1),1/n_cat*y,str_y) for (str_y,y) in score_l[1:]]:
+        #for (y1,y2,c) in [(1,1/n_cat*5, 0.99), (1/n_cat*5, 1/n_cat*4, 0.9), (1/n_cat*4, 1/n_cat*3, 0.8), (1/n_cat*3, 1/n_cat*2, 0.7), (1/n_cat*2, 1/n_cat*1, 0.5), (1/n_cat*1, 1/n_cat*0, 0)]:
             y1_stick = legend_h - y1 * legend_h
             y2_stick = legend_h - y2 * legend_h
             self.draw_fun(x0, y1_stick, c, col_width = 10, col_height = y2_stick-y1_stick)
@@ -343,7 +348,7 @@ class SequenceScoreFace(StaticItemFace):
 
         # Y axes and colo rect
         yi = -1
-        for model in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+        for model in MODELS_L:
             if self.dict_values_pcoc.has_key(model):
                 yi += 1
                 y = yi * self.col_w
@@ -374,8 +379,10 @@ class SequenceScoreFace(StaticItemFace):
 ### Function
 
 def get_corr_color(x):
-    score = [1,0.99,0.9,0.8,0.7,0.5,0]
-    color = ["red", "red",  "orange", "#EFDB00", "#6BAC00", "#7174D0",  "#A3A3A3"]
+    score = [1,0.99,0.9,0.8,0.7,0.5, 0.3, 0.1, 0]
+    color = ["red", "red",  "orange", "#EFDB00", "#6BAC00","#008000", "#7174D0", "#800080", "#A3A3A3"]
+    score = [1,0.99,0.9,0.8,0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+    color = ["#9E0142","#9E0142","#D53E4F","#F46D43","#FDAE61","#FEE08B","#E6F598","#ABDDA4","#66C2A5","#3288BD","#5E4FA2","#A3A3A3"]
 
     for i in range(len(score)):
         if x >= score[i]:
@@ -612,7 +619,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
 
 
     ### Histogram up
-    if hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+    if hist_up in MODELS_L:
         header_hist_value_up = 'Posterior probability (' + hist_up.upper() +' model)'
         hist_value_up = dict_benchmark[hist_up]
         # Define emphased lines
@@ -649,7 +656,7 @@ def make_tree_ali_detect_combi(g_tree, ali_nf, Out,
     sequencescorebox.hp = hp
     sequencescorebox.x_values = x_values_up
     sequencescorebox.x_inter_values = inter
-    if not hist_up in ["PCOC", "PC", "OC", "Topological", "Identical"]:
+    if not hist_up in MODELS_L:
         sequencescorebox.x_axis=True
 
     phylotree_style.aligned_header.add_face(sequencescorebox, 1)

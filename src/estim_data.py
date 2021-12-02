@@ -1,29 +1,34 @@
 #  estim_data.py
-#  
+#
 #  Copyright 2017 Carine Rey <carine.rey@ens-lyon.fr>
-#  
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
-#  
-#  
+#
+#
 
 import math
 import os
 import re
+import numpy as np
+
+from scipy.misc import logsumexp
+
 from Bio import AlignIO
 from ete3 import Tree
+
 import logging
 logger = logging.getLogger("pcoc.estim_data")
 
@@ -44,7 +49,7 @@ def read_info(nf, n_sites):
             ll.append(lnL)
             i+=1
     pos = n_sites
-    while pos >= i:
+    while pos > i:
         ll.append(None)
         i+=1
 
@@ -76,7 +81,7 @@ def read_info_exception(f, n_sites, O, NorP, C1C1_C1C2):
                 #logger.warning("f: %s, O: %s, NorP: %s, C1C1_C1C2: %s", f, O, NorP, C1C1_C1C2)
     #logger.debug("O: %s, k: %s, NorP: %s, res: %s", O, NorP, C1C1_C1C2, res)
     return res
-    
+
 def prob_ap(x,y):
     if x and y:
         return math.exp(x-y)/(math.exp(x-y)+1)
@@ -105,7 +110,7 @@ def likelihood_max(x):
     if x == [None]:
         return None
     return(max(x))
-    
+
 
 def sensspec(tab):
     #logger.debug ("P: %s ( TP %s + FN %s)", tab["TP"] + tab["FN"],  tab["TP"], tab["FN"])
@@ -114,20 +119,20 @@ def sensspec(tab):
       ss="NA"
     else:
       ss=tab["TP"]/(tab["TP"]+tab["FN"])
-    
+
     if tab["TN"]+tab["FP"]==0:
       sp="NA"
     else:
       sp = tab["TN"]/(tab["TN"]+tab["FP"])
-    
+
     mcc_nom = tab["TP"]*tab["TN"] - tab["FP"]*tab["FN"]
     mcc_den =  (tab["TP"]+tab["FP"])*(tab["TP"]+tab["FN"])*(tab["TN"]+tab["FP"])*(tab["TN"]+tab["FN"])
-    
+
     if mcc_den == 0:
         mcc = 0
     else:
         mcc = mcc_nom /  math.sqrt(mcc_den)
-    
+
     return [ss,sp,mcc]
 
 def get_method(P):
@@ -147,26 +152,27 @@ def get_method(P):
 ##                       PCOC model                                   ##
 ########################################################################
 
-#$def dico_typechg(C1,C2, N, repest, name_AC, tree="", NbCat_Est=10, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID="", dist_C1_C2=None):
-def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID="", dist_C1_C2=None):
-    
+def dico_typechg(C1,C2, name_AC, g_tree, est_profiles, sim_profiles, n_sites=1000, set_e1e2=[], lseuil=[0.7,0.80,0.85,0.90,0.95,0.99], ID=""):
+
     repest = g_tree.repest
-    N = g_tree.n_events 
+    N = g_tree.n_events
     tree = os.path.basename(g_tree.init_tree_fn)
-    
+
+    NbCat_Est = est_profiles.nb_cat
+
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
 
     ## 11 : sequences generees par C1-C1
-    ## 12 : sequences generees par C1-C2  
+    ## 12 : sequences generees par C1-C2
     simu_i = name_AC.split("_")[1]
 
     lsites = range(n_sites)
-    
+
     bilan = {11:{"pos":lsites}, 12:{"pos":lsites}}
     P_l = []
     test1_l = ["X_XY","OX_OXY","XY_OXY","X_OXY","X_OX"]
     test2_l = ["p_max", "p_mean", "p_opt"]
-    
+
     for test1 in test1_l:
         for test2 in test2_l:
             P = test2 + "_" + test1
@@ -182,7 +188,7 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
             for test2 in test2_l:
                 P = test2 + "_" + test1
                 P_l.append(P)
-        
+
     for a in ["X", "OX", "XY", "OXY"]:
         for b in ["opt_", "mean_", "max_"]:
             for k in [11,12]:
@@ -212,7 +218,7 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
             bilan[k]["opt_OX"].append(opt_OX)
             opt_OXY = dli["withOneChange"][k][12][s]
             bilan[k]["opt_OXY"].append(opt_OXY)
-            
+
             bilan[k]["p_opt_X_XY"].append(   prob_ap(opt_XY,opt_X)   )
             bilan[k]["p_opt_OX_OXY"].append( prob_ap(opt_OXY,opt_OX) )
             bilan[k]["p_opt_X_OXY"].append(  prob_ap(opt_OXY,opt_X)  )
@@ -224,7 +230,7 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
             for e2 in range(1, (NbCat_Est+1)):
                 if e2 != e1:
                    set_e1e2.append((e1,e2))
-                   
+
     X_l   = []
     XY_l  = []
     OX_l  = []
@@ -235,12 +241,12 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
         XY_l.append({11:[], 12:[]})
         OX_l.append({11:[], 12:[]})
         OXY_l.append({11:[], 12:[]})
-            
+
     for (e1,e2) in set_e1e2:
         if e2 == e1:
                 continue
         dli = {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
-        for O in ["withOneChange","noOneChange"]: 
+        for O in ["withOneChange","noOneChange"]:
             #logger.debug ("Count e1: %s e2: %s O: %s", e1, e2,O)
             infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C1,e1,e1,O)
             infosC1C1E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C1,e1,e2,O)
@@ -279,13 +285,13 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
             bilan[k]["max_OX"].append(max_OX)
             max_OXY = likelihood_max(OXY_l[s][k])
             bilan[k]["max_OXY"].append(max_OXY)
-            
+
             bilan[k]["p_max_X_XY"].append(   prob_ap(max_XY,max_X)   )
             bilan[k]["p_max_OX_OXY"].append( prob_ap(max_OXY,max_OX) )
             bilan[k]["p_max_X_OXY"].append(  prob_ap(max_OXY,max_X)  )
             bilan[k]["p_max_X_OX"].append(   prob_ap(max_OX,max_X)   )
             bilan[k]["p_max_XY_OXY"].append( prob_ap(max_OXY,max_XY) )
-            
+
             # p_mean:
             mean_X   = likelihood_mean(X_l  [s][k])
             bilan[k]["mean_X"].append(mean_X)
@@ -295,42 +301,29 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
             bilan[k]["mean_OX"].append(mean_OX)
             mean_OXY = likelihood_mean(OXY_l[s][k])
             bilan[k]["mean_OXY"].append(mean_OXY)
-            
+
             bilan[k]["p_mean_X_XY"].append(   prob_ap_no_log(mean_XY, mean_X)  )
             bilan[k]["p_mean_OX_OXY"].append( prob_ap_no_log(mean_OXY,mean_OX) )
             bilan[k]["p_mean_X_OXY"].append(  prob_ap_no_log(mean_OXY,mean_X)  )
             bilan[k]["p_mean_X_OX"].append(   prob_ap_no_log(mean_OX, mean_X)  )
             bilan[k]["p_mean_XY_OXY"].append( prob_ap_no_log(mean_OXY,mean_XY) )
-            
-            #logger.debug("mean_X: %s max_X:%s", bilan[k]["mean_X"][s], bilan[k]["max_X"][s])
-            #logger.debug("mean_XY: %s max_XY:%s", bilan[k]["mean_XY"][s], bilan[k]["max_XY"][s])
-            #logger.debug("p_mean_X_XY: %s p_max_X_XY:%s", bilan[k]["p_mean_X_XY"][s], bilan[k]["p_max_X_XY"][s])
-            #logger.debug("mean_X: %s", bilan[k]["mean_X"][s])
-            #logger.debug("mean_XY: %s", bilan[k]["mean_XY"][s])
-            #logger.debug("mean_OXY: %s", bilan[k]["mean_OXY"][s])
-            #logger.debug("mean_OX: %s", bilan[k]["mean_OX"][s])
-            #logger.debug("k: %s, mean_X: %s, mean_XY: %s, p_mean_X_XY: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_XY"][s], bilan[k]["p_mean_X_XY"][s])
-            #logger.debug("k: %s, mean_X: %s, mean_OX: %s, p_mean_X_OX: %s", k, bilan[k]["mean_X"][s],bilan[k]["mean_OX"][s], bilan[k]["p_mean_X_OX"][s])
-            #logger.debug("p_mean_X_XY: %s", bilan[k]["p_mean_X_XY"][s])
-            #logger.debug("p_mean_X_OX: %s", bilan[k]["p_mean_X_OX"][s])
-            #logger.debug("p_mean_X_OXY: %s", bilan[k]["p_mean_X_OXY"][s])
-            #logger.debug("p_mean_OX_OXY: %s p_max_OX_OXY:%s", bilan[k]["p_mean_OX_OXY"][s], bilan[k]["p_max_OX_OXY"][s])
+
     # Calcul (VP, FP, FN, VN)
     res = []
     for P in P_l:
         for seuil in lseuil:
             tab={}
-           
+
             tab["PosteriorProbabilityType"]= P
             tab["TP"]=float(len([s for s in bilan[12][P] if s >= seuil]))
             tab["FN"]=float(len([s for s in bilan[12][P] if s < seuil]))
             tab["FP"]=float(len([s for s in bilan[11][P] if s >= seuil]))
             tab["TN"]=float(len([s for s in bilan[11][P] if s < seuil]))
-        
+
             tab["C1"] = C1
             tab["C2"] = C2
             tab["SimuCoupleID"] = "A%s_C%s" %(C1, C2)
-            tab["DistanceSimuCouple"] = dist_C1_C2["C" + str(C1)]["C" + str(C2)]
+            tab["DistanceSimuCouple"] = sim_profiles.get_dist(C1,C2)
             tab["NumberOfSites"] = n_sites
             tab["NumberOfConvergentEvents"] = N
             tab["Threshold"] = seuil
@@ -340,21 +333,54 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
                 tab["InputTree"] = tree
             if ID:
                 tab["RunID"] = ID
-            
+
             tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
-    
+
     return res, bilan
 
-def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
+def calc_p_from_V1(df_V1_prep):
+    """equivalent to dico_typechg_het_det"""
+
+    df_V1_prep["Model"] = "X"
+    df_V1_prep.loc[(df_V1_prep.C1 == df_V1_prep.C2) & df_V1_prep.OneChange, "Model"] = "OX"
+    df_V1_prep.loc[(df_V1_prep.C1 != df_V1_prep.C2) & df_V1_prep.OneChange, "Model"] = "OXY"
+    df_V1_prep.loc[(df_V1_prep.C1 != df_V1_prep.C2) & (~ df_V1_prep.OneChange), "Model"] = "XY"
+    df_V1_prep.loc[(df_V1_prep.C1 == df_V1_prep.C2) & (~ df_V1_prep.OneChange), "Model"] = "X"
+    agg_funcs = {"lnl":{"lnl_max":np.max, "lnl_mean": lambda x: logsumexp(x, b=1/float(len(x)))}}
+    df_V1_prep = df_V1_prep[['Sites', 'lnl',  'Model']].groupby(['Sites', 'Model']).agg(agg_funcs).reset_index(col_level = 1)
+    df_V1_prep.columns = df_V1_prep.columns.get_level_values(1)
+
+    df_V1_prep = df_V1_prep.pivot_table(index=['Sites'], columns='Model', values=['lnl_mean', 'lnl_max'])
+    df_V1_prep.columns = ["%s_%s" %(x,y) for x,y in df_V1_prep.columns]
+    df_V1_prep = df_V1_prep.reset_index()
+
+    for model_type in ["max","mean"]:
+        for model_couple in [("X","OX"), ("X","XY"), ("X","OXY"), ("OX","OXY"), ("XY","OXY")]:
+            #df_V1_2["p_max_X_OX"] = df_V1_2.apply(lambda x: np.exp(x["lnl_max_X"]-x["lnl_max_OX"])/(np.exp(x["lnl_max_X"]-x["lnl_max_OX"])+1), axis = 1)
+            m_name1 = model_couple[0]
+            m_name2 = model_couple[1]
+            p_name = "p_%s_%s_%s" %(model_type, m_name1, m_name2)
+            c_name1 = "lnl_%s_%s" %(model_type, m_name1)
+            c_name2 = "lnl_%s_%s" %(model_type, m_name2)
+            df_V1_prep[p_name] = df_V1_prep.apply(lambda x: np.exp(x[c_name2]-x[c_name1])/(np.exp(x[c_name2]-x[c_name1])+1), axis = 1)
+
+    df_V1 = df_V1_prep [["Sites", "p_mean_X_OXY", "p_mean_X_XY", "p_mean_X_OX"]]
+    df_V1.columns = ["Sites", "PCOC_V1", "PC_V1", "OC_V1"]
+
+    return(df_V1)
+
+def dico_typechg_het_det(ali_filename, g_tree, est_profiles, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
-    
+
     tree = os.path.basename(g_tree.init_tree_fn)
-    
+
     N = g_tree.n_events
     repest = g_tree.repest
     repseq = g_tree.repseq
     n_sites = g_tree.n_sites
+
+    NbCat_Est = est_profiles.nb_cat
 
     lsites = range(n_sites)
 
@@ -373,7 +399,7 @@ def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], ls
         for b in ["mean_", "max_"]:
             for k in [11,12]:
                 bilan[k][b+a] = []
-                
+
     if not DEV:
         test1_l = ["X_XY","X_OXY","X_OX"]
         test2_l = ["p_mean"]
@@ -382,7 +408,7 @@ def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], ls
             for test2 in test2_l:
                 P = test2 + "_" + test1
                 P_l.append(P)
-    
+
     if not set_e1e2:
         for e1 in range(1, (NbCat_Est+1)):
             for e2 in range(1, (NbCat_Est+1)):
@@ -392,7 +418,7 @@ def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], ls
     XY_l  = []
     OX_l  = []
     OXY_l = []
-    
+
     for s in lsites:
         X_l.append({11:[], 12:[]})
         XY_l.append({11:[], 12:[]})
@@ -493,7 +519,7 @@ def outdiff(c1,c2, name, g_tree):
   repseq = g_tree.repseq
   reptree = g_tree.reptree
   repest = g_tree.repest
-    
+
   laa=list("ARNDCQEGHILKMFPSTWYV")
   ##### Sequences
   fasta_file = "%s/%s.fa" %(repseq,name)
@@ -529,7 +555,7 @@ def outdiff(c1,c2, name, g_tree):
 
     for ch in lconv:
       seqconv=ali[int(ch.ND)].seq
-      
+
       #logger.debug(seqconv)
 
       for p in range(ln):
@@ -561,35 +587,17 @@ def outdiff(c1,c2, name, g_tree):
 
   mdiff=[max(x.values()) for x in pdiff_mdiff]
 
-
-  #~ #### output per site nb of clades with at least a change
-  #~ print "diffone"
-  #~ print diffone
-
-  #~ #### output per site nb of clades with changes at all leaves
-  #~ print "diffall"
-  #~ print diffall
-
-  #~ #### output per site nb of clades with a change at the start
-  #~ print "diffdeb"
-  #~ print diffdeb
-
-  #~ #### output per site max nb of clades with similar aa at the start,
-  #~ #### different from the ancestral one
-  #~ print "mdiff"
-  #~ print mdiff
-
-  #logger.debug(mdiff)
   with open(repest+"/"+name+".conv","w") as f:
     f.write("nb_cl_1diff\tnb_cl_alldiff\tnb_cl_diffstart\tmax_same_aa_diffstart\n")
     for i in range(ln):
         f.write("%d\t%d\t%d\t%d\n"%(diffone[i],diffall[i],diffdeb[i],mdiff[i]))
 
 
-def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1_C2 = ""):
+def dico_typechg_obs_sub(C1, C2, name_AC, g_tree, est_profiles, sim_profiles, n_sites = 1000,  ID= ""):
     N = g_tree.n_events
     repest = g_tree.repest
     tree = os.path.basename(g_tree.init_tree_fn)
+
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents
 
 ## 11 : sequences generees par C1-C1
@@ -605,7 +613,7 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
 
     conv_file_C1C2 = "%s/Scenario_%s_A%s_C%s.conv"%(repest,simu_i,C1,C2)
     conv_file_C1C1 = "%s/Scenario_%s_A%s_C%s.conv"%(repest,simu_i,C1,C1)
-    
+
     dch={x:[] for x in [11,12]}
 
     if not os.path.exists(conv_file_C1C2):
@@ -614,7 +622,6 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
       logger.error("%s n'existe pas"%(conv_file_C1C1))
 
     ### filtre sites et compte same_aa
-    #lsites={}
     for k in [11,12]:
       if k==11:
         fconv=open(conv_file_C1C1,"r")
@@ -640,7 +647,7 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
     for s in lsites:
         for k in [11, 12]:
             bilan[k]["p_ident"].append(1 if (dch[k][s] == N) else 0)
-    
+
     for P in P_l:
         for seuil in lseuil:
             tab={}
@@ -648,10 +655,6 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
             tab["FN"]=float(len([s for s in bilan[12][P] if s < seuil]))
             tab["FP"]=float(len([s for s in bilan[11][P] if s >= seuil]))
             tab["TN"]=float(len([s for s in bilan[11][P] if s < seuil]))
-            #tab["TP"]=float(len([s for s in dch[12] if s == N]))
-            #tab["FN"]=float(len([s for s in dch[12] if s < N]))
-            #tab["FP"]=float(len([s for s in dch[11] if s == N]))
-            #tab["TN"]=float(len([s for s in dch[11] if s < N]))
 
             tab["PosteriorProbabilityType"] = "p_ident"
             tab["C1"] = C1
@@ -660,17 +663,17 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
             tab["Threshold"] = "NA"
             tab["NumberOfSites"] = n_sites
             tab["NumberOfConvergentEvents"] = N
-            tab["DistanceSimuCouple"] = dist_C1_C2["C" + str(C1)]["C" + str(C2)]
+            tab["DistanceSimuCouple"] = sim_profiles.get_dist(C1,C2)
             tab["Method"] = "Identical"
             tab["ScenarioID"] = "Scenario_%s" %simu_i
             if tree:
                 tab["InputTree"] = tree
             if ID:
                 tab["RunID"] = ID
-            
+
             tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
-            
+
     return res, bilan
 
 
@@ -680,18 +683,21 @@ def dico_typechg_obs_sub(C1,C2,name_AC, g_tree, n_sites = 1000,  ID= "", dist_C1
 
 
 
-def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "", lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], NbCat_Est = 10, dist_C1_C2 = ""):
+def dico_typechg_topo(C1, C2, name_AC,g_tree, est_profiles, sim_profiles, set_t1 = [], n_sites = 0, ID = "", lseuil = [0.7,0.80,0.85,0.90,0.95,0.99]):
+
     ### 11 : sequences generees par C1-C1
     ### 12 : sequences generees par C1-C2
 
     N = g_tree.n_events
     repest = g_tree.repest
     tree = os.path.basename(g_tree.init_tree_fn)
-    
+
+    NbCat_Est = est_profiles.nb_cat
+
     simu_i = name_AC.split("_")[1]
 
     lsites = range(n_sites)
-    
+
     bilan = {11:{"pos":lsites}, 12:{"pos":lsites}}
     P_l = []
     test1_l = ["X_CX"]
@@ -745,14 +751,14 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
             opt_CX  = dli[k][12][s]
             bilan[k]["opt_CX"].append(opt_CX)
             bilan[k]["p_opt_X_CX"].append(prob_ap(opt_CX,opt_X))
-    
+
     X_l   = []
     CX_l  = []
-    
+
     for s in lsites:
         X_l.append({11:[], 12:[]})
         CX_l.append({11:[], 12:[]})
-    
+
     for t1 in set_t1:
         dli={}
         dli[11]={}  # spec
@@ -797,7 +803,7 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
             bilan[k]["mean_X"].append(mean_X)
             mean_CX  = likelihood_mean(CX_l [s][k])
             bilan[k]["mean_CX"].append(mean_CX)
-            
+
             bilan[k]["p_mean_X_CX"].append(   prob_ap_no_log(mean_CX, mean_X)  )
 
             #logger.debug("mean_X: %s max_X:%s", bilan[k]["mean_X"][s], bilan[k]["max_X"][s])
@@ -809,7 +815,7 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
     for P in P_l:
         for seuil in lseuil:
             tab={}
-           
+
             tab["PosteriorProbabilityType"]= P
             tab["TP"]=float(len([s for s in bilan[12][P] if s >= seuil]))
             tab["FN"]=float(len([s for s in bilan[12][P] if s < seuil]))
@@ -818,7 +824,7 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
             tab["C1"] = C1
             tab["C2"] = C2
             tab["SimuCoupleID"] = "A%s_C%s" %(C1, C2)
-            tab["DistanceSimuCouple"] = dist_C1_C2["C" + str(C1)]["C" + str(C2)]
+            tab["DistanceSimuCouple"] = sim_profiles.get_dist(C1,C2)
             tab["NumberOfSites"] = n_sites
             tab["NumberOfConvergentEvents"] = N
             tab["Threshold"] = seuil
@@ -828,9 +834,9 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
                 tab["InputTree"] = tree
             if ID:
                 tab["RunID"] = ID
-            
+
             tab["Sensitivity"], tab["Specificity"], tab["MCC"] = sensspec(tab)
             res.append(tab)
-    
+
     return res, bilan
 

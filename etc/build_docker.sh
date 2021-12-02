@@ -3,7 +3,7 @@
 set -e
 
 IMAGE_NAME=pcoc
-TAG=v1.0.2
+TAG=v1.1.0
 DOCKERFILE_DIR=.
 REPO=carinerey/$IMAGE_NAME
 docker build -t $REPO:$TAG -f etc/Dockerfile $DOCKERFILE_DIR

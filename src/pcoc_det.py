@@ -29,14 +29,15 @@ import re
 import time
 import logging
 import math
+import multiprocessing
 
 import bpp_lib
 import events_placing
 import estim_data
-
-#import multiprocessing
+import profile_tools
 
 import pandas as pd
+import numpy  as np
 from ete3 import Tree
 
 from Bio import AlignIO, SeqIO, Seq, SeqRecord
@@ -51,12 +52,12 @@ start_time = time.time()
 ### Option defining
 parser = argparse.ArgumentParser(prog="pcoc_det.py",
                                  description='')
-parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+parser.add_argument('--version', action='version', version='%(prog)s 1.1.0')
 
 parser._optionals.title = "MISCELLANEOUS"
-#parser.add_argument('-cpu', type=int,
-#                    help="Number of cpu to use. (default: 1)",
-#                    default=1)
+parser.add_argument('-cpu', type=int,
+                    help="Number of cpu to use. (default: 1)",
+                    default=1)
 
 ##############
 requiredOptions = parser.add_argument_group('REQUIRED OPTIONS')
@@ -116,9 +117,9 @@ AdvancedOptions = parser.add_argument_group('OPTIONS FOR ADVANCED USAGE')
 AdvancedOptions.add_argument('--auto_trim_tree', action="store_true",
                     help="Remove leaves from the tree not present in the alignment.",
                     default=False)
-AdvancedOptions.add_argument('-CATX_est', type=int, choices = [10,60],
-                    help="Profile categorie to estimate data (10->C10 or 60->C60). (default: 10)",
-                    default=10)
+AdvancedOptions.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
+                    help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
+                    default="C10")
 AdvancedOptions.add_argument('--gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
@@ -178,33 +179,21 @@ LogFile = OutDirName + "/pcoc_det.log"
 # create logger
 logger = logging.getLogger("pcoc")
 logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-#fh = logging.FileHandler(LogFile)
+
 # create console handler with a higher log level
 ch = logging.StreamHandler()
 if args.debug:
     ch.setLevel(logging.DEBUG)
-#    fh.setLevel(logging.DEBUG)
 else:
     ch.setLevel(logging.INFO)
-#    fh.setLevel(logging.INFO)
 # create formatter and add it to the handlers
 formatter_fh = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 formatter_ch = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-#fh.setFormatter(formatter_fh)
 ch.setFormatter(formatter_ch)
 # add the handlers to the logger
-#logger.addHandler(fh)
 logger.addHandler(ch)
 
 logger.debug(sys.argv)
-
-#cpu = args.cpu
-#try:
-#    cpus = multiprocessing.cpu_count()
-#except NotImplementedError:
-#    cpus = 1   # arbitrary default
-#logger.info("%s on %s cpus", cpu, cpus)
 
 if args.LD_LIB:
     logger.info("$LD_LIBRARY_PATH will be change from %s to %s", os.environ.get("LD_LIBRARY_PATH", ""), args.LD_LIB)
@@ -212,24 +201,51 @@ if args.LD_LIB:
 else:
     logger.debug("$LD_LIBRARY_PATH is %s", os.environ.get("LD_LIBRARY_PATH", ""))
 
-
-repbppconfig = OutDirName +  "bpp_config"
+repbppconfig = OutDirName + "bpp_config"
 if not os.path.exists(repbppconfig):
     os.mkdir(repbppconfig)
 
-bpp_lib.write_config(repbppconfig, estim=True)
+cpu = args.cpu
+try:
+    cpus = multiprocessing.cpu_count()
+except NotImplementedError:
+    cpus = 1   # arbitrary default
+logger.info("%s on %s cpus", cpu, cpus)
 
-#http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
-pattern = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\b")
+##########################
+# Profiles configuration #
+##########################
+
+## est profiles definition
+est_profiles = profile_tools.check_profiles(args.est_profiles, repbppconfig, "est")
+NbCat_Est = est_profiles.nb_cat
+
+metadata_run_dico["Profile categories use during estimation"] = est_profiles.name
+
+logger.info("Profile category uses during estimation:\t%s\t%s", NbCat_Est, est_profiles.name)
+
+############################
+# Bpp output configuration #
+############################
+
+# Bpp global configuration
+bpp_lib.write_global_config(repbppconfig, estim=True)
 
 
-logger.info("alignment: %s", args.ali)
+#####################
+# Ali configuration #
+#####################
+
+
+logger.info("Alignment: %s", args.ali)
 ali_filename = args.ali
 
 l_n_sites = []
 
 if os.path.isfile(ali_filename):
     ali = AlignIO.read(ali_filename, "fasta")
+    n_sites = ali.get_alignment_length()
+    nb_seq = len(ali)
     #check alphabet
     alphabet = {}
     error = {}
@@ -243,6 +259,7 @@ if os.path.isfile(ali_filename):
             else:
                 error.setdefault(letter,0)
                 error[letter]+=1
+    logger.info("Alignment: %s seqs %s sites", nb_seq, n_sites)
     logger.info("Alphabet usage:\n%s ", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  alphabet.items()]))
     if error:
         logger.error("Invalid character in the alignment: %s", ", ".join(["%s(%.2f%%)" %(k,float(100*v/float(n_tot))) for k,v in  error.items()]))
@@ -254,14 +271,18 @@ else:
 logger.info("alignment ok after checking")
 
 
-n_sites = ali.get_alignment_length()
-nb_seq = len(ali)
+#######################
+# Trees configuration #
+#######################
 
+
+#http://stackoverflow.com/questions/23172293/use-python-to-extract-branch-lengths-from-newick-format
+pattern = re.compile(r"\b[0-9]+(?:\.[0-9]+)?\b")
 
 logger.info("tree: %s", args.tree)
 tree_filename = args.tree
-# test if a tree
 
+# test if a tree
 
 try:
     t=Tree(tree_filename)
@@ -366,7 +387,7 @@ elif args.manual_mode:
         manual_mode_nodes["T"].append(l_e[0])
         manual_mode_nodes["C"].extend(l_e[1:])
 
-NbCat_Est = args.CATX_est
+
 metadata_run_dico["NbCat_Est"] = NbCat_Est
 metadata_run_dico["Tree"] = os.path.basename(tree_filename)
 metadata_run_dico["Alignment"] = os.path.basename(ali_filename)
@@ -380,33 +401,31 @@ metadata_run_dico["max_gap_allowed"] = args.max_gap_allowed
 metadata_run_dico["max_gap_allowed_in_conv_leaves"] = args.max_gap_allowed_in_conv_leaves
 
 if not (0 <= args.max_gap_allowed_in_conv_leaves <= 100):
-    logger.error("max_gap_allowed_in_conv_leaves (%s) must be between 0 and 100", max_gap_allowed_in_conv_leaves)
+    logger.error("max_gap_allowed_in_conv_leaves (%s) must be between 0 and 100", args.max_gap_allowed_in_conv_leaves)
     sys.error(1)
 
 if not (0 <= args.max_gap_allowed <= 100):
-    logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
+    logger.error("max_gap_allowed (%s) must be between 0 and 100", args.max_gap_allowed)
     sys.error(1)
 
 p_filter_threshold = args.filter_t
 
 dict_p_filter_threshold = {}
-dict_p_filter_threshold["PCOC"] = p_filter_threshold
-dict_p_filter_threshold["PC"] = p_filter_threshold
-dict_p_filter_threshold["OC"] = p_filter_threshold
+dict_p_filter_threshold["PCOC_V1"] = p_filter_threshold
+dict_p_filter_threshold["PC_V1"] = p_filter_threshold
+dict_p_filter_threshold["OC_V1"] = p_filter_threshold
 
 if args.filter_t_pcoc >= 0:
-    dict_p_filter_threshold["PCOC"] = args.filter_t_pcoc
+    dict_p_filter_threshold["PCOC_V1"] = args.filter_t_pcoc
 if args.filter_t_pc >= 0:
-    dict_p_filter_threshold["PC"] = args.filter_t_pc
+    dict_p_filter_threshold["PC_V1"] = args.filter_t_pc
 if args.filter_t_oc >= 0:
-    dict_p_filter_threshold["OC"] = args.filter_t_oc
+    dict_p_filter_threshold["OC_V1"] = args.filter_t_oc
 
 
-metadata_run_dico["pp_threshold_PCOC"] = dict_p_filter_threshold["PCOC"]
-metadata_run_dico["pp_threshold_PC"] = dict_p_filter_threshold["PC"]
-metadata_run_dico["pp_threshold_OC"] = dict_p_filter_threshold["OC"]
-
-
+metadata_run_dico["pp_threshold_PCOC_V1"] = dict_p_filter_threshold["PCOC_V1"]
+metadata_run_dico["pp_threshold_PC_V1"] = dict_p_filter_threshold["PC_V1"]
+metadata_run_dico["pp_threshold_OC_V1"] = dict_p_filter_threshold["OC_V1"]
 
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
@@ -432,6 +451,15 @@ def reorder_l(l, order):
         p = order[i]
         new_l[p] = l[i]
     return new_l
+
+def make_estim(s):
+    e1, e2, g_tree, OneChange = s
+    if OneChange:
+        suffix = "_withOneChange"
+    else:
+        suffix = "_noOneChange"
+    df_res = bpp_lib.make_estim(ali_basename, e1, e2, g_tree, est_profiles, suffix=suffix,  OneChange=OneChange, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+    return (df_res)
 
 def mk_detect(tree_filename, ali_basename, OutDirName):
     start_detec = time.time()
@@ -461,41 +489,33 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         metadata_simu_dico["allbranchlength"] = allbranchlength
         metadata_simu_dico["convbranchlength"] = convbranchlength
 
-
-        l_TPFPFNTN_mod_het = []
-        l_TPFPFNTN_topo = []
-        l_TPFPFNTN_obs_sub = []
-
         if not os.path.isfile(g_tree.repseq + "/" + ali_basename):
             logger.error("%s does not exist", g_tree.repseq + "/" + ali_basename)
             sys.exit(1)
 
-        c1 = 1  # useless but compatibility
-        c2 = 2  # useless but compatibility
-
         set_e1e2 = []
         for e1 in range(1, (NbCat_Est+1)):
             for e2 in range(1, (NbCat_Est+1)):
-                set_e1e2.append((e1,e2))
-        for (e1,e2) in set_e1e2:
-            logger.debug ("Estime e1: %s e2: %s", e1, e2)
-            # Positif
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_noOneChange",  OneChange = False, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-            bpp_lib.make_estim(ali_basename, e1, e2, g_tree, NBCATest=NbCat_Est, suffix="_withOneChange",  OneChange = True, ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
+                if e1 != e2:
+                    set_e1e2.append((e1,e2,g_tree))
 
+        # PCOC V1
+        set_e1e2 = []
+        for e1 in range(1, (NbCat_Est+1)):
+            for e2 in range(1, (NbCat_Est+1)):
+                #with_OneChange
+                set_e1e2.append((e1,e2,g_tree, True))
+                #without_OneChange
+                set_e1e2.append((e1,e2,g_tree, False))
 
-        ### post proba
-        res, bilan = estim_data.dico_typechg_het_det(ali_basename,  g_tree, set_e1e2 = set_e1e2 , NbCat_Est = NbCat_Est, ID = date)
-        l_TPFPFNTN_mod_het.extend(res)
+        pool = multiprocessing.Pool(processes=cpu)
+        df_res_l = pool.map(make_estim, set_e1e2)
+        pool.close()
+        pool.join()
 
-        for p in ["p_max_OX_OXY","p_max_XY_OXY","p_mean_OX_OXY","p_mean_XY_OXY"]:
-            if bilan[12].has_key(p):
-                del bilan[12][p]
+        df_V1_raw = pd.concat(df_res_l)
+        df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
 
-        dict_values_pcoc = {}
-        dict_values_pcoc["PCOC"] = bilan[12]["p_mean_X_OXY"]
-        dict_values_pcoc["PC"] = bilan[12]["p_mean_X_XY"]
-        dict_values_pcoc["OC"] = bilan[12]["p_mean_X_OX"]
 
         ### Get indel prop
         prop_indel = [0]*n_sites
@@ -508,18 +528,40 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                     if sp_conv:
                         prop_indel_conv[i]  +=1
 
+        ### Table
+        #### complete:
+        all_pos = range(1, n_sites +1)
+
+        df_bilan = pd.DataFrame({"Sites":all_pos})
+
+        df_bilan["Indel_prop"] = prop_indel
+        df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
+
+        df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
+        df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
+
+        if not df_V1.empty:
+            df_bilan = pd.merge(df_bilan, df_V1, on = "Sites", how = "outer")
+
+        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1"]]
+        df_bilan = df_bilan[col_bilan]
+
+        dict_values_pcoc = {}
+        for m in ["PCOC_V1", "PC_V1","OC_V1"]:
+            if m in df_bilan.columns:
+                dict_values_pcoc[m] = df_bilan[m].values
+
+        models = dict_values_pcoc.keys()
 
         # filter position:
-
         bilan_f = {}
-        all_pos = range(1, n_sites +1)
 
         # filter on indel prop:
         t_indel = args.max_gap_allowed_in_conv_leaves * float(g_tree.numberOfConvLeafs)
         all_pos_without_indel_sites = [ p for p in all_pos if prop_indel_conv[p-1] < t_indel ]
 
         dict_pos_filtered = {}
-        for model in ["PCOC", "PC", "OC"]:
+        for model in models:
             dict_pos_filtered[model] = [p for p in all_pos_without_indel_sites if dict_values_pcoc[model][p-1] >= dict_p_filter_threshold[model] ]
             if positions_to_highlight:
                 dict_pos_filtered[model].extend(positions_to_highlight)
@@ -533,10 +575,10 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         dict_pos_filtered["union"] = all_filtered_position
 
         if args.reorder:
-            for model in ["PCOC", "PC", "OC", "union"]:
+            for model in models + ["union"]:
                 m_list = [model]
                 if model == "union":
-                    m_list = ["PCOC", "PC", "OC"]
+                    m_list = models
                 nb_filtered_pos = len(dict_pos_filtered[model])
                 new_order = [0]*nb_filtered_pos
                 j = 0
@@ -571,29 +613,22 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
         # filtered ali:
         ## Per model
-        for model in ["PCOC", "PC", "OC", "union"]:
-            filtered_ali = []
-            for seq in ali:
-                new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
-                filtered_ali.append(new_seq)
-            SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
-            if model == "union":
-                modelstr = "union"
-            else:
-                modelstr = model
-            logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
+        if models:
+            for model in models + ["union"]:
+                filtered_ali = []
+                for seq in ali:
+                    new_seq = SeqRecord.SeqRecord(Seq.Seq("".join(filter_l(list(seq.seq),dict_pos_filtered[model]))), seq.id, "", "")
+                    filtered_ali.append(new_seq)
+                SeqIO.write(filtered_ali, g_tree.repfasta+"/filtered_ali."+model+".faa", "fasta")
+                if model == "union":
+                    modelstr = "union"
+                else:
+                    modelstr = model
+                logger.info("%s model: # filtered position: %s/%s", modelstr.upper(), len(dict_pos_filtered[model]), n_sites)
 
         ## Output
 
-        ### Table
-        #### complete:
-        df_bilan = pd.DataFrame.from_dict(dict_values_pcoc, orient='columns', dtype=None)
-        df_bilan["Sites"] = all_pos
-        df_bilan["Indel_prop"] = prop_indel
-        df_bilan["Indel_prop"] = df_bilan["Indel_prop"] / nb_seq
-        df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
-        df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
-        df_bilan = df_bilan[["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC", "PC","OC"]]
+
         #### filtered:
         df_bilan_f = df_bilan[df_bilan.Sites.isin(all_filtered_position)]
         df_bilan_f = df_bilan_f.copy()
@@ -604,14 +639,13 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
 
 
         ### Plot
-        if args.plot:
+        if args.plot and models:
             if args.plot_complete_ali:
                 plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.pdf", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
                 if args.svg:
                     plot_data.make_tree_ali_detect_combi(g_tree, g_tree.repseq + "/" + ali_basename, prefix_out+"_plot_complete.svg", dict_benchmark=dict_values_pcoc, hp=positions_to_highlight, title = args.plot_title)
 
-
-            for model in ["PCOC", "PC", "OC"]:
+            for model in models:
                 if dict_pos_filtered[model] and dict_p_filter_threshold[model] <=1:
                     dict_values_pcoc_filtered_model = {}
                     for (key, val) in dict_values_pcoc.items():
@@ -670,5 +704,3 @@ if __name__ == "__main__":
 
     logger.info("--- %s seconds ---", str(time.time() - start_time))
     logger.info("Output dir: %s", OutDirName)
-
-

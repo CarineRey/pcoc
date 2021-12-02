@@ -12,9 +12,12 @@ W_DIR=$CWD
 elif [ -n "$SHARED_DIR" ]
 then
 W_DIR=$SHARED_DIR
+elif [ "$PWD" != "/data" ]
+then
+W_DIR=$PWD
+else
+W_DIR="/data"
 fi
-
-W_DIR=${W_DIR:-/data}
 
 echo "Working directory : $W_DIR"
 cd $W_DIR
