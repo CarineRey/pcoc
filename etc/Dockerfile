@@ -1,5 +1,5 @@
 FROM debian:stretch
-MAINTAINER Carine Rey carine.rey@ens-lyon.org
+LABEL org.opencontainers.image.authors=carine.rey@ens-lyon.org
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -qy \
@@ -28,62 +28,75 @@ RUN apt-get update && \
        libcurl4-openssl-dev \
        libxml2-dev \
        libssl-dev \
-       libcairo2-dev
+       libcairo2-dev \
+       libeigen3-dev
 
 RUN pip install ete3==3.0.0b35
-RUN pip install biopython
+RUN pip install biopython==1.76
+RUN pip install pandas
+RUN pip install scipy
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/
 
-# # Install R
-# RUN echo """deb http://cloud.r-project.org/bin/linux/debian stretch-cran34/""" >> /etc/apt/sources.list \
-#     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FCAE2A0E115C3D8A
-# RUN apt-get update && apt-get install --no-install-recommends -qy r-base r-base-dev \
-#     && rm -rf /var/lib/apt/lists/* \
-#     && echo 'install.packages(c("ggplot2", "plyr", "reshape2", "readr", "cowplot"), repos="http://cran.us.r-project.org", dependencies=TRUE)' > /tmp/packages.R \
-#     && Rscript /tmp/packages.R
-
 # install bpp:
+RUN sudo apt-get install texinfo -y
+
+ENV bpp_core_version=fa5da67
+#405cab5 -> #aad2b8d -> #fa5da67
+
 WORKDIR $bpp_dir/sources/bpp-core
 RUN git clone https://github.com/BioPP/bpp-core . &&\
-    git checkout 405cab5 &&\
+    git checkout $bpp_core_version &&\
     cmake  . && \
     (make -j 4 || make) && \
     make install
+
+ENV bpp_seq_version=3930130
+#32d9c67 -> #bb21df5 -> #3930130
 
 WORKDIR $bpp_dir/sources/bpp-seq
 RUN git clone https://github.com/BioPP/bpp-seq . && \
-    git checkout 32d9c67 &&\
+    git checkout $bpp_seq_version &&\
     cmake  . && \
     (make -j 4 || make) && \
     make install
+
+ENV bpp_popgen_version=4bc260d
+#77d712e -> #b788fd9 -> #4bc260d
 
 WORKDIR $bpp_dir/sources/bpp-popgen
 RUN git clone https://github.com/BioPP/bpp-popgen . &&\
-    git checkout 77d712e &&\
+    git checkout $bpp_popgen_version &&\
     cmake  . && \
     (make -j 4 || make) && \
     make install
 
+ENV bpp_phyl_version=266d544
+#78d0235 -> #4bbd6b1 -> #266d544
+
 WORKDIR $bpp_dir/sources/bpp-phyl
 RUN git clone  https://github.com/BioPP/bpp-phyl . &&\
-    git checkout  78d0235 &&\
+    git checkout $bpp_phyl_version &&\
     cmake  . && \
     (make -j 4 || make)  && \
     make install
 
+ENV bppsuite_version=a82cfc3
+#77ccc0a -> #be18fc9 -> #a82cfc3
+
 WORKDIR $bpp_dir/sources/bppsuite
 RUN git clone https://github.com/BioPP/bppsuite . &&\
-    git checkout 77ccc0a &&\
+    git checkout $bppsuite_version &&\
     cmake  . && \
     (make -j 4 || make) && \
     make install
 
-
+WORKDIR /data
 COPY data/* /data/
 COPY README.md /usr/local/etc/
 COPY etc/entrypoint.sh /usr/local/bin/entrypoint.sh
 
+COPY src/* /usr/local/bin/
 CMD ["cat", "/usr/local/etc/README.md"]
 ENTRYPOINT ["bash", "/usr/local/bin/entrypoint.sh"]
 
