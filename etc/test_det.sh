@@ -68,5 +68,5 @@ ali=$PWD/data/SLC26A5.fasta
 ali_trim=$PWD/data/SLC26A5_trim.fasta
 
 tail -n 56  $ali > $ali_trim #remove elephant (15)
-$DOCKER_CMD pcoc_det.py -cpu 2 --V1 -t $tree -aa $ali_trim -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC" --auto_trim_tree
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali_trim -o $PWD/output_pcoc_det -m 11,9,10/6/15 --plot -plot_title "Test PCOC" --auto_trim_tree
 
