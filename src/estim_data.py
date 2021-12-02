@@ -32,8 +32,7 @@ DEV = False
 def read_info(nf, n_sites):
     f=open(nf, "r")
     ll=[]
-    i=1
-    #logger.debug(nf)
+    i=0    
     for l in f:
         if l[0]!="S":
             el = l.split()
@@ -191,10 +190,10 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
 
     dli= {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
     for O in ["withOneChange","noOneChange"]: 
-        infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C1,C1,C1,O)
-        infosC1C1C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C1,C1,C2,O)
-        infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C2,C1,C1,O)
-        infosC1C2C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos"%(repest,simu_i,C1,C2,C1,C2,O)
+        infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C1,C1,C1,O)
+        infosC1C1C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C1,C1,C2,O)
+        infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C2,C1,C1,O)
+        infosC1C2C1C2OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_%s.infos_1"%(repest,simu_i,C1,C2,C1,C2,O)
 
         ### read infos
         dli[O][11][12] = read_info_exception(infosC1C1C1C2OPT_file, n_sites, O, 11, 12)
@@ -243,10 +242,10 @@ def dico_typechg(C1,C2, name_AC, g_tree, NbCat_Est=10, n_sites=1000, set_e1e2=[]
         dli = {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
         for O in ["withOneChange","noOneChange"]: 
             #logger.debug ("Count e1: %s e2: %s O: %s", e1, e2,O)
-            infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C1,e1,e1,O)
-            infosC1C1E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C1,e1,e2,O)
-            infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C2,e1,e1,O)
-            infosC1C2E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos"%(repest,simu_i,C1,C2,e1,e2,O)
+            infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C1,e1,e1,O)
+            infosC1C1E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C1,e1,e2,O)
+            infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C2,e1,e1,O)
+            infosC1C2E1E2_file = "%s/Scenario_%s_A%s_C%s_%s_%s_%s.infos_1"%(repest,simu_i,C1,C2,e1,e2,O)
 
             ### read infos
             dli[O][11][12] = read_info_exception(infosC1C1E1E2_file, n_sites, O, 11, 12)
@@ -405,8 +404,8 @@ def dico_typechg_het_det(ali_filename, g_tree, NbCat_Est = 10, set_e1e2 = [], ls
         dli = {"withOneChange" : {11:{}, 12:{}}, "noOneChange" :{11:{}, 12:{}}}
         for O in ["withOneChange","noOneChange"]:
             logger.debug ("Count e1: %s e2: %s O: %s", e1, e2,O)
-            infosC1C2E1E1_file = "%s/%s_%s_%s_%s.infos"%(repest,ali_filename,e1,e1,O)
-            infosC1C2E1E2_file = "%s/%s_%s_%s_%s.infos"%(repest,ali_filename,e1,e2,O)
+            infosC1C2E1E1_file = "%s/%s_%s_%s_%s.infos_1"%(repest,ali_filename,e1,e1,O)
+            infosC1C2E1E2_file = "%s/%s_%s_%s_%s.infos_1"%(repest,ali_filename,e1,e2,O)
 
             ### read infos
             dli[O][12][12]=read_info_exception(infosC1C2E1E2_file, n_sites, O, 12, 12)
@@ -722,11 +721,11 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
         for t1 in range(1, (NbCat_Est+1)):
             set_t1.append(t1)
     
-    infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos"%(repest,simu_i,C1,C1,C1,C1)
-    infosC1C1T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos"%(repest,simu_i,C1,C1,C1)
+    infosC1C1C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos_1"%(repest,simu_i,C1,C1,C1,C1)
+    infosC1C1T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos_1"%(repest,simu_i,C1,C1,C1)
     
-    infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos"%(repest,simu_i,C1,C2,C1,C1)
-    infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos"%(repest,simu_i,C1,C2,C1)
+    infosC1C2C1C1OPT_file = "%s/Scenario_%s_A%s_C%s_%s_%s_opt_noOneChange.infos_1"%(repest,simu_i,C1,C2,C1,C1)
+    infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s_opt.infos_1"%(repest,simu_i,C1,C2,C1)
   
     dli={}
     dli[11]={}  # spec
@@ -759,11 +758,11 @@ def dico_typechg_topo(C1, C2, name_AC,g_tree, set_t1 = [], n_sites = 0, ID = "",
         dli[11]={}  # spec
         dli[12]={}  # sens
         logger.debug ("Count T1: %s", t1)
-        infosC1C1T1_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos"%(repest,simu_i,C1,C1,t1)
-        infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos"%(repest,simu_i,C1,C1,t1,t1)
+        infosC1C1T1_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos_1"%(repest,simu_i,C1,C1,t1)
+        infosC1C1E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos_1"%(repest,simu_i,C1,C1,t1,t1)
 
-        infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos"%(repest,simu_i,C1,C2,t1,t1)
-        infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos"%(repest,simu_i,C1,C2,t1)
+        infosC1C2E1E1_file = "%s/Scenario_%s_A%s_C%s_%s_%s_noOneChange.infos_1"%(repest,simu_i,C1,C2,t1,t1)
+        infosC1C2T1OPT_file = "%s/Scenario_%s_A%s_C%s_topo_t%s.infos_1"%(repest,simu_i,C1,C2,t1)
         
 
         ### read infos
