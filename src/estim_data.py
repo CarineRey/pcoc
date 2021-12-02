@@ -339,22 +339,6 @@ def dico_typechg(C1,C2, name_AC, g_tree, est_profiles, sim_profiles, n_sites=100
 
     return res, bilan
 
-def calc_p_from_mixture(df_mixture):
-    df_mixture = df_mixture.groupby(['Sites'])["lnl_Ma","lnl_Mpc","lnl_Mpcoc"].aggregate(logsumexp).reset_index()
-
-    df_mixture = df_mixture[["Sites","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
-
-    df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]] = df_mixture[["lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].apply(np.exp)
-
-    sum_per_row = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].sum(axis=1)
-    df_mixture[["p_Ma","p_Mpc","p_Mpcoc"]] = df_mixture[["exp_lnl_Ma","exp_lnl_Mpc","exp_lnl_Mpcoc"]].div(sum_per_row, axis=0)
-    
-    df_mixture["p_Mpcoc+pc"] = df_mixture["p_Mpcoc"] + df_mixture["p_Mpc"]
-
-    df_mixture = df_mixture[["Sites","p_Ma","p_Mpc","p_Mpcoc","p_Mpcoc+pc","lnl_Ma","lnl_Mpc","lnl_Mpcoc"]].sort_values(by=['Sites'])
-    return(df_mixture)
-
-
 def calc_p_from_V1(df_V1_prep):
     """equivalent to dico_typechg_het_det"""
 
@@ -385,10 +369,6 @@ def calc_p_from_V1(df_V1_prep):
     df_V1.columns = ["Sites", "PCOC_V1", "PC_V1", "OC_V1"]
 
     return(df_V1)
-
-
-
-
 
 def dico_typechg_het_det(ali_filename, g_tree, est_profiles, set_e1e2 = [], lseuil = [0.7,0.80,0.85,0.90,0.95,0.99], ID= ""):
 ### dico des proba a posteriori qd nb clades avec changement = nbe clades convergents

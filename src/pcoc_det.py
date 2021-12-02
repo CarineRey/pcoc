@@ -120,9 +120,6 @@ AdvancedOptions.add_argument('--auto_trim_tree', action="store_true",
 AdvancedOptions.add_argument('-est_profiles', type=str,  metavar="[C10,C60,filename]",
                     help="Profile categories to simulate data (C10->C10 CAT profiles, C60->C60 CAT profiles, a csv file containing aa frequencies). (default: C10)",
                     default="C10")
-AdvancedOptions.add_argument('-p_conv', type=float, metavar="FLOAT [0,1]",
-                    help="Probability of a declared transition to be a convergent transition (in pcoc) (default: 1, all transitions must be seen)",
-                    default=1)
 AdvancedOptions.add_argument('--gamma', action="store_true",
                     help="Use rate_distribution=Gamma(n=4) instead of Constant()",
                     default=False)
@@ -137,12 +134,6 @@ AdvancedOptions.add_argument('--max_gap_allowed_in_conv_leaves', type=int,
                     default=5)
 AdvancedOptions.add_argument('--no_cleanup', action="store_true",
                     help="Do not cleanup the working directory after the run.",
-                    default=False)
-AdvancedOptions.add_argument('--V1', action="store_true",
-                    help="Run also PCOC V1.",
-                    default=False)
-AdvancedOptions.add_argument('--no_mixture', action="store_true",
-                    help="Do not run PCOC mixture (V2).",
                     default=False)
 AdvancedOptions.add_argument("-LD_LIB", metavar='LD_LIBRARY_PATH', type=str, default="",
                    help="Redefine the LD_LIBRARY_PATH env variable, bppsuite library must be present in the $PATH and in the LD_LIBRARY_PATH")
@@ -172,8 +163,6 @@ OutDirName = OutDirName.replace("//","/")
 
 
 metadata_run_dico["date"] = date
-metadata_run_dico["V1"] = args.V1
-metadata_run_dico["V2"] = not args.no_mixture
 
 ### Set up the output directory
 if os.path.isdir(OutDirName):
@@ -412,11 +401,11 @@ metadata_run_dico["max_gap_allowed"] = args.max_gap_allowed
 metadata_run_dico["max_gap_allowed_in_conv_leaves"] = args.max_gap_allowed_in_conv_leaves
 
 if not (0 <= args.max_gap_allowed_in_conv_leaves <= 100):
-    logger.error("max_gap_allowed_in_conv_leaves (%s) must be between 0 and 100", max_gap_allowed_in_conv_leaves)
+    logger.error("max_gap_allowed_in_conv_leaves (%s) must be between 0 and 100", args.max_gap_allowed_in_conv_leaves)
     sys.error(1)
 
 if not (0 <= args.max_gap_allowed <= 100):
-    logger.error("max_gap_allowed (%s) must be between 0 and 100", max_gap_allowed)
+    logger.error("max_gap_allowed (%s) must be between 0 and 100", args.max_gap_allowed)
     sys.error(1)
 
 p_filter_threshold = args.filter_t
@@ -425,10 +414,6 @@ dict_p_filter_threshold = {}
 dict_p_filter_threshold["PCOC_V1"] = p_filter_threshold
 dict_p_filter_threshold["PC_V1"] = p_filter_threshold
 dict_p_filter_threshold["OC_V1"] = p_filter_threshold
-dict_p_filter_threshold["p_Mpcoc+pc"] = p_filter_threshold
-dict_p_filter_threshold["p_Mpcoc"] = p_filter_threshold
-dict_p_filter_threshold["p_Mpc"] = p_filter_threshold
-dict_p_filter_threshold["p_Ma"] = p_filter_threshold
 
 if args.filter_t_pcoc >= 0:
     dict_p_filter_threshold["PCOC_V1"] = args.filter_t_pcoc
@@ -441,19 +426,11 @@ if args.filter_t_oc >= 0:
 metadata_run_dico["pp_threshold_PCOC_V1"] = dict_p_filter_threshold["PCOC_V1"]
 metadata_run_dico["pp_threshold_PC_V1"] = dict_p_filter_threshold["PC_V1"]
 metadata_run_dico["pp_threshold_OC_V1"] = dict_p_filter_threshold["OC_V1"]
-metadata_run_dico["pp_threshold_p_Mpcoc+pc"] = dict_p_filter_threshold["p_Mpcoc+pc"]
-metadata_run_dico["pp_threshold_p_Mpcoc"] = dict_p_filter_threshold["p_Mpcoc"]
-metadata_run_dico["pp_threshold_p_Mpc"] = dict_p_filter_threshold["p_Mpc"]
-metadata_run_dico["pp_threshold_p_Ma"] = dict_p_filter_threshold["p_Ma"]
 
 prefix_out = OutDirName + "/" + os.path.splitext(os.path.basename(ali_filename))[0]
 
-<<<<<<< HEAD
 
 pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", header=True, sep='\t')
-=======
-pd.Series(metadata_run_dico).to_csv(OutDirName + "/run_metadata.tsv", sep='\t')
->>>>>>> 79d8f9b... big refactoring
 
 def remove_folder(path):
     # check if folder exists
@@ -474,11 +451,6 @@ def reorder_l(l, order):
         p = order[i]
         new_l[p] = l[i]
     return new_l
-
-def make_estim_mixture(s):
-    e1, e2,g_tree = s
-    df_res = bpp_lib.make_estim_mixture(ali_basename, e1, e2, g_tree, est_profiles, suffix="_withMixture",  ext="", max_gap_allowed=args.max_gap_allowed, gamma=args.gamma, inv_gamma=args.inv_gamma)
-    return (df_res)
 
 def make_estim(s):
     e1, e2, g_tree, OneChange = s
@@ -527,39 +499,23 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
                 if e1 != e2:
                     set_e1e2.append((e1,e2,g_tree))
 
-        # Mixture
-        Mixture = not args.no_mixture
-        if Mixture:
-            pool = multiprocessing.Pool(processes=cpu)
-            df_res_mixture_l = pool.map(make_estim_mixture, set_e1e2)
-            pool.close()
-            pool.join()
-
-            df_mixture_raw = pd.concat(df_res_mixture_l)
-            df_mixture = estim_data.calc_p_from_mixture(df_mixture_raw)
-        else:
-            df_mixture = pd.DataFrame()
-
         # PCOC V1
-        PCOC_V1 = args.V1
-        if PCOC_V1:
-            set_e1e2 = []
-            for e1 in range(1, (NbCat_Est+1)):
-                for e2 in range(1, (NbCat_Est+1)):
-                    #with_OneChange
-                    set_e1e2.append((e1,e2,g_tree, True))
-                    #without_OneChange
-                    set_e1e2.append((e1,e2,g_tree, False))
+        set_e1e2 = []
+        for e1 in range(1, (NbCat_Est+1)):
+            for e2 in range(1, (NbCat_Est+1)):
+                #with_OneChange
+                set_e1e2.append((e1,e2,g_tree, True))
+                #without_OneChange
+                set_e1e2.append((e1,e2,g_tree, False))
 
-            pool = multiprocessing.Pool(processes=cpu)
-            df_res_l = pool.map(make_estim, set_e1e2)
-            pool.close()
-            pool.join()
+        pool = multiprocessing.Pool(processes=cpu)
+        df_res_l = pool.map(make_estim, set_e1e2)
+        pool.close()
+        pool.join()
 
-            df_V1_raw = pd.concat(df_res_l)
-            df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
-        else:
-            df_V1 = pd.DataFrame()
+        df_V1_raw = pd.concat(df_res_l)
+        df_V1 = estim_data.calc_p_from_V1(df_V1_raw)
+
 
         ### Get indel prop
         prop_indel = [0]*n_sites
@@ -584,17 +540,14 @@ def mk_detect(tree_filename, ali_basename, OutDirName):
         df_bilan["Indel_prop(ConvLeaves)"] = prop_indel_conv
         df_bilan["Indel_prop(ConvLeaves)"] = df_bilan["Indel_prop(ConvLeaves)"] / float(g_tree.numberOfConvLeafs)
 
-        if not df_mixture.empty:
-            df_bilan = pd.merge(df_bilan, df_mixture, on = "Sites", how = "outer")
-
         if not df_V1.empty:
             df_bilan = pd.merge(df_bilan, df_V1, on = "Sites", how = "outer")
 
-        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc", "p_Mpcoc", "p_Mpc", "p_Ma"]]
+        col_bilan = [c for c in df_bilan.columns if c in ["Sites","Indel_prop", "Indel_prop(ConvLeaves)", "PCOC_V1", "PC_V1","OC_V1"]]
         df_bilan = df_bilan[col_bilan]
 
         dict_values_pcoc = {}
-        for m in ["PCOC_V1", "PC_V1","OC_V1","p_Mpcoc+pc","p_Mpcoc", "p_Mpc", "p_Ma"]:
+        for m in ["PCOC_V1", "PC_V1","OC_V1"]:
             if m in df_bilan.columns:
                 dict_values_pcoc[m] = df_bilan[m].values
 

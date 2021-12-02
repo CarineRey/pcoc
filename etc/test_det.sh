@@ -45,9 +45,9 @@ $DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 
 
 ## if you want to have a nice plot of the sites detected as convergent you can use the option --plot with or without the option --reorder
 ## With the --reorder option:
-$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot --reorder
 ## Without the --reorder option:
-$DOCKER_CMD pcoc_det.py -cpu 2 --no_mixture --V1 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
+$DOCKER_CMD pcoc_det.py -cpu 2 -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot -plot_title "Test PCOC"
 ## if you want to have a nice plot of your complete alignment you can use --plot_complete_ali
 $DOCKER_CMD pcoc_det.py -t $tree -aa $ali -o $PWD/output_pcoc_det -m 0/3 --plot_complete_ali --plot --reorder -plot_title "Test PCOC"
 
