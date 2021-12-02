@@ -146,16 +146,9 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                     number_of_models +=1
 
                     if sim_profiles.name in ["C10","C60"]:
-<<<<<<< HEAD
-                        sup_command_bppseqgen+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
-                    #else:
-                            #
-
-=======
                         sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
                     else:
                         sup_command+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
->>>>>>> b0d82f1... update frequencies setting in LG08+F
                     t_node = nodes[0]
                     nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
                     nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,str(t_node))
@@ -164,23 +157,6 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                         number_of_models +=1
 
                         if sim_profiles.name in ["C10","C60"]:
-<<<<<<< HEAD
-                            sup_command_bppseqgen+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                        #else:
-                            #
-                        
-                        nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
-                        nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodes[1:])))
-                else:
-                    number_of_models +=1
-                    if sim_profiles.name in ["C10","C60"]:
-                        sup_command_bppseqgen+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
-                    #else:
-                        #
-                    
-                    nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
-                    nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodes)))
-=======
                             sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
                         else:
                             sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
@@ -192,7 +168,6 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                     else:
                         sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
                     sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodes)))
->>>>>>> b0d82f1... update frequencies setting in LG08+F
 
     
     command_bppseqgen+=" %s NONHOMOGENEOUS_MODELS=\"%s\" " %(sup_command_bppseqgen, nonhomogeneous_models)
