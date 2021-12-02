@@ -15,7 +15,7 @@ mkdir -p  $OUTPUT_DIR
 meth="--pcoc"
 meth="--pcoc --ident --topo"
 debug="--no_cleanup --debug"
-#debug=""
+debug=""
 
 
 DOCKER_CMD="docker run --rm -i -e LOCAL_USER_ID=`id -u $USER` -v $ROOT_DIR:$ROOT_DIR -v $TREES_DIR:$TREES_DIR -v $DATA_DIR:$DATA_DIR  carinerey/pcoc:v1.1.0"
