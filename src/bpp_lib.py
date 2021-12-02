@@ -241,7 +241,7 @@ def make_estim(name, c1, c2, g_tree, NBCATest=10, suffix="",
         logger.error("command_bppml: %s\nout:\n%s", command_bppml, out)
         sys.exit(42)
 
-def make_estim_conv(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max_gap_allowed=90):
+def make_estim_conv_topo(name, c1, g_tree, suffix="", NBCATest=10, gamma = False, max_gap_allowed=90):
 
 
     repseq        = g_tree.repseq

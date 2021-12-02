@@ -743,18 +743,18 @@ def mk_simu((i, tree_filename, OutDirNamePrefixTree), n_try = 0) :
             if args.topo:
                 #OPT
                 # Positif
-                bpp_lib.make_estim_conv(nameAC,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+                bpp_lib.make_estim_conv_topo(nameAC,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
                 # Negatif
-                bpp_lib.make_estim_conv(nameA,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
+                bpp_lib.make_estim_conv_topo(nameA,c1,g_tree,suffix="_t"+str(c1)+"_opt", NBCATest=NbCat_Sim)
 
                 set_t1 = []
                 for t1 in range(1, (NbCat_Est+1)):
                     set_t1.append(t1)
                     logger.debug ("Estime t1: %s ", t1)
                     # Positif
-                    bpp_lib.make_estim_conv(nameAC,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+                    bpp_lib.make_estim_conv_topo(nameAC,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
                     # Negatif
-                    bpp_lib.make_estim_conv(nameA,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
+                    bpp_lib.make_estim_conv_topo(nameA,t1,g_tree,suffix="_t"+str(t1), NBCATest=NbCat_Est)
 
 
                 res_topo, bilan_topo = estim_data.dico_typechg_topo(c1,c2, nameAC, g_tree, set_t1=set_t1, n_sites=Nsites, ID=date, NbCat_Est=NbCat_Est, dist_C1_C2=dist_C1_C2)
