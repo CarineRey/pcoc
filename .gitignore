@@ -1,4 +1,7 @@
-test/*
+test*/*
+test*
+debug*/*
+Debug*/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
