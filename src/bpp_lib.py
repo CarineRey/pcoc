@@ -87,7 +87,7 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
         outputInternalSequences = "no"
 
     command_bppseqgen = "bppseqgen FASTA_OUT=%s TREE=%s NUMBER_OF_SITES=%s OUTPUT_INTERNAL_SEQUENCES=%s "\
-            %(fasta_outfile, tree_fn, nbCAT,number_of_sites, outputInternalSequences)
+            %(fasta_outfile, tree_fn, number_of_sites, outputInternalSequences)
     
     command_bppseqgen+=" param=%s Ne1=%d Ne2=%d " %(repbppconfig+"/CATseq_sim.bpp",c1,c2)
 
@@ -107,13 +107,13 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
         command_bppseqgen += " PROFILE_F=%s " %(sim_profiles.formatted_frequencies_filename)
     
     if sim_profiles.name in ["C10","C60"]:
-        command+=" MODEL_A=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
-        command+=" MODEL_C=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
-        command+=" MODEL_OC=\'OneChange(model=$(MODEL_C))\' "
+        command_bppseqgen+=" MODEL_A=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c1)
+        command_bppseqgen+=" MODEL_C=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(c2)
+        command_bppseqgen+=" MODEL_OC=\'OneChange(model=$(MODEL_C))\' "
     else:
-        command+=" MODEL_A=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
-        command+=" MODEL_C=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
-        command+=" MODEL_OC=\'OneChange(model=$(MODEL_C))\' "
+        command_bppseqgen+=" MODEL_A=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne1)))\' "
+        command_bppseqgen+=" MODEL_C=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=$(Ne2)))\' "
+        command_bppseqgen+=" MODEL_OC=\'OneChange(model=$(MODEL_C))\' "
 
 
     command_bppseqgen += " \'ROOT_FREQ=FromModel(model=$(MODEL_A))\' "
@@ -121,24 +121,29 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
     if c1!=c2:
         if nodesWithAncestralModel:
             number_of_models +=1
-            command+=" model%s=\'$(MODEL_A)\' " %(number_of_models)
-            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
+            command_bppseqgen+=" model%s=\'$(MODEL_A)\' " %(number_of_models)
+            nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+            nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodesWithAncestralModel)))
 
         if nodesWithTransitions:
             number_of_models +=1
-            command+=" model%s=\'$(MODEL_OC)\' " %(number_of_models)
-            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithTransitions)))
+            command_bppseqgen+=" model%s=\'$(MODEL_OC)\' " %(number_of_models)
+            nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+            nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodesWithTransitions)))
 
         if nodesWithConvergentModel:
             number_of_models +=1
-            command+=" model%s=\'$(MODEL_C)\' " %(number_of_models)
-            command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
+            command_bppseqgen+=" model%s=\'$(MODEL_C)\' " %(number_of_models)
+            nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+            nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodesWithConvergentModel)))
 
     else:
         allNodes = nodesWithConvergentModel+nodesWithTransitions+nodesWithAncestralModel
         number_of_models +=1
-        command+=" model%s=\'$(MODEL_A)\' " %(number_of_models)
-        command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, allNodes)))
+        command_bppseqgen+=" model%s=\'$(MODEL_A)\' " %(number_of_models)
+        nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+        nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, allNodes)))
+        
 
     # If noisy profiles
     sup_command_bppseqgen = ""
@@ -149,9 +154,9 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                     number_of_models +=1
 
                     if sim_profiles.name in ["C10","C60"]:
-                        sup_command+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
+                        sup_command_bppseqgen+=" model%s=\'OneChange(model=LGL08_CAT_C%s(nbCat=$(NBCAT)))\' " %(number_of_models, cz)
                     else:
-                        sup_command+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
+                        sup_command_bppseqgen+=" model%s=\'OneChange(model=LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s)))\' " %(number_of_models, cz)
                     t_node = nodes[0]
                     nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
                     nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,str(t_node))
@@ -160,17 +165,19 @@ def make_simul(name, c1, c2, g_tree, sim_profiles,
                         number_of_models +=1
 
                         if sim_profiles.name in ["C10","C60"]:
-                            sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
+                            sup_command_bppseqgen+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
                         else:
-                            sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
-                        sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str,nodes[1:])))
+                            sup_command_bppseqgen+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
+                        nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+                        nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str,nodes[1:])))
                 else:
                     number_of_models +=1
                     if sim_profiles.name in ["C10","C60"]:
-                        sup_command+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
+                        sup_command_bppseqgen+=" model%s=\'LGL08_CAT_C%s(nbCat=$(NBCAT))\' " %(number_of_models, cz)
                     else:
-                        sup_command+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
-                    sup_command+=" model%s.nodes_id=\'%s\' " %(number_of_models,",".join(map(str, nodes)))
+                        sup_command_bppseqgen+=" model%s=\'LG08+F(frequencies=Empirical(file=$(PROFILE_F), col=%s))\' " %(number_of_models, cz)
+                    nonhomogeneous_models+="model%s=%s," %(number_of_models, number_of_models)
+                    nonhomogeneous_models+="model%s.nodes_id=(%s)," %(number_of_models,",".join(map(str, nodes)))
 
     
     command_bppseqgen+=" %s NONHOMOGENEOUS_MODELS=\"%s\" " %(sup_command_bppseqgen, nonhomogeneous_models)
@@ -343,9 +350,10 @@ def make_estim_conv_topo(name, c1, g_tree, est_profiles, suffix="", gamma = Fals
 
     output_infos  = "%s/%s_topo%s.infos"   %(repest, name, suffix)
     output_params = "%s/%s_topo%s.params" %(repest, name, suffix)
+    output_tree      = "%s/%s_%s.dnd" %(repest, name , suffix)
 
-    command_bppml="bppml param=%s output.infos=%s output.estimates=%s TREE=%s \'FILESEQ=%s\' " \
-        %(repbppconfig + "/CATseq_conv.bpp", output_infos, output_params, tree_fn, fasta_file)
+    command_bppml="bppml param=%s output.infos=%s output.estimates=%s output.tree.file=%s TREE=%s \'FILESEQ=%s\' " \
+        %(repbppconfig + "/CATseq_conv.bpp", output_infos, output_params, output_tree, tree_fn, fasta_file)
     
     number_of_models = 0
 
@@ -440,8 +448,6 @@ input.sequence.remove_saturated_sites = yes
 root_freq1=$(ROOT_FREQ)
 rate_distribution1=$(RATE_DISTRIBUTION)
 
-model1=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT))
-
 process1=Homogeneous(model=1, tree=1, root_freq=1, rate=1)
 #process{number} = {Homogeneous|OnePerBranch}(tree={number}, model={number}, rate={number} [, root_freq={number}])
 
@@ -451,9 +457,6 @@ result=phylo1
 
 ### estimation
 optimization.ignore_parameters=BrLen*
-
-output.infos=$(REP_EST)/$(NAME)_topo$(SUFFIX).infos
-output.estimates=$(REP_EST)/$(NAME)_topo$(SUFFIX).params
 """
 
 #==> CATseq_sim.bpp <==
@@ -461,7 +464,7 @@ CATseq_sim_bpp = """alphabet=Protein
 
 input.tree1=user(file=$(TREE), format=NHX)
 
-root_freq1=FromModel(model=LGL08_CAT_C$(Ne1)(nbCat=$(NBCAT)))
+root_freq1=$(ROOT_FREQ)
 rate_distribution1=$(RATE_DISTRIBUTION)
 
 process1=NonHomogeneous($(NONHOMOGENEOUS_MODELS), tree=1, root_freq=1, rate=1)
